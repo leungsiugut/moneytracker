@@ -1,16 +1,16 @@
 const SUPPORTED_CURRENCIES = [
-  { code: 'CAD', name: 'CAD ($) - 加拿大元' },
-  { code: 'USD', name: 'USD ($) - 美元' },
-  { code: 'HKD', name: 'HKD ($) - 港幣' },
-  { code: 'EUR', name: 'EUR (€) - 歐元' },
-  { code: 'JPY', name: 'JPY (¥) - 日圓' },
-  { code: 'GBP', name: 'GBP (£) - 英鎊' },
-  { code: 'AED', name: 'AED (د.إ) - 阿聯酋迪拉姆' },
-  { code: 'AUD', name: 'AUD ($) - 澳元' },
-  { code: 'CNY', name: 'CNY (¥) - 人民幣' },
-  { code: 'TWD', name: 'TWD ($) - 新台幣' },
-  { code: 'CHF', name: 'CHF (Fr) - 瑞士法郎' },
-  { code: 'SGD', name: 'SGD ($) - 新加坡元' }
+  { code: 'CAD', name: 'CAD' },
+  { code: 'USD', name: 'USD' },
+  { code: 'HKD', name: 'HKD' },
+  { code: 'EUR', name: 'EUR' },
+  { code: 'JPY', name: 'JPY' },
+  { code: 'GBP', name: 'GBP' },
+  { code: 'AED', name: 'AED' },
+  { code: 'AUD', name: 'AUD' },
+  { code: 'CNY', name: 'CNY' },
+  { code: 'TWD', name: 'TWD' },
+  { code: 'CHF', name: 'CHF' },
+  { code: 'SGD', name: 'SGD' }
 ];
 
 const THEME_PALETTES = [
@@ -101,6 +101,7 @@ function getAccountTypeIcon(type) {
   }
 }
 
+/* 1. 幣種選單純 3 字母 Code 化 */
 function initCurrencyDropdowns() {
   const selects = [
     document.getElementById('setting-base-currency'),
@@ -115,7 +116,7 @@ function initCurrencyDropdowns() {
     SUPPORTED_CURRENCIES.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.code;
-      opt.innerText = c.name;
+      opt.innerText = c.code;
       select.appendChild(opt);
     });
     if (currentVal) select.value = currentVal;
@@ -184,13 +185,13 @@ function fmtCur(amt, cur = 'CAD') {
 function setSyncStatus(state, msg) {
   const el = document.getElementById('sync-status-indicator');
   const text = document.getElementById('sync-status-text');
-  el.className = `sync-status ${state}`;
-  text.innerText = msg;
+  if (el) el.className = `sync-status ${state}`;
+  if (text) text.innerText = msg;
 }
 
 async function pushToGoogleSheet() {
   if (!SCRIPT_URL) return;
-  setSyncStatus('syncing', '正在儲存至試算表...');
+  setSyncStatus('syncing', '正在儲存...');
   try {
     const payload = { accounts, groups, categories, transactions };
     await fetch(SCRIPT_URL, {
@@ -199,7 +200,7 @@ async function pushToGoogleSheet() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    setSyncStatus('synced', '已同步至 Google Sheet');
+    setSyncStatus('synced', '已同步');
   } catch (err) {
     console.error('Push failed:', err);
     setSyncStatus('error', '同步失敗');
@@ -211,7 +212,7 @@ async function pullFromGoogleSheet() {
     setSyncStatus('', '未連線（點擊設定）');
     return;
   }
-  setSyncStatus('syncing', '正在從試算表讀取...');
+  setSyncStatus('syncing', '正在讀取...');
   try {
     const res = await fetch(SCRIPT_URL);
     const data = await res.json();
@@ -716,17 +717,17 @@ function getHoldings(accId) {
       const totalGL = capitalGL + data.totalDividends;
       const totalGLPercent = data.totalCost > 0 ? (totalGL / data.totalCost) * 100 : 0;
 
-      list.push({
-        symbol: sym,
-        shares: data.shares,
-        avgCost,
-        currentPrice,
-        marketValue,
-        capitalGL,
-        totalGL,
-        totalGLPercent,
-        totalDividends: data.totalDividends
-      });
+          list.push({
+            symbol: sym,
+            shares: data.shares,
+            avgCost,
+            currentPrice,
+            marketValue,
+            capitalGL,
+            totalGL,
+            totalGLPercent,
+            totalDividends: data.totalDividends
+          });
     }
   }
 
@@ -908,12 +909,18 @@ function renderHoldings(currentAcc) {
   });
 }
 
+/* 4. 搜尋列支援日期智能分流與多層明細渲染 */
 function renderTransactions(currentAcc) {
   const container = document.getElementById('content-container');
   let accTxs = transactions.filter(t => t.accountId === currentAcc.id || t.toAccountId === currentAcc.id);
 
   if (searchKeyword) {
+    const isDatePattern = /^\d{4}[-/]\d{1,2}/.test(searchKeyword) || /^\d{2}[-/]\d{2}/.test(searchKeyword);
     accTxs = accTxs.filter(t => {
+      const txDate = normalizeDateString(t.date);
+      if (isDatePattern) {
+        return txDate.includes(searchKeyword.replace('/', '-'));
+      }
       const title = (t.title || '').toLowerCase();
       const sym = (t.symbol || '').toLowerCase();
       const cat = categories.find(c => c.id === t.categoryId);
@@ -1141,10 +1148,10 @@ function switchTxTab(type) {
   const isTransferOrExchange = (isTransfer || isExchange);
   const isAdjust = (type === 'adjust');
 
-  document.getElementById('f-group-from-acc').style.display = 'flex';
-  document.getElementById('label-from-acc').innerText = isTransferOrExchange ? '轉出戶口 (From Account)' : '帳戶 (Account)';
+  document.getElementById('label-from-acc').innerText = isTransferOrExchange ? '轉出戶口' : '帳戶';
+  document.getElementById('f-group-target-container').style.display = isTransferOrExchange ? 'block' : 'none';
+  document.getElementById('tx-from-currency').style.display = isTransferOrExchange ? 'block' : 'none';
 
-  document.getElementById('f-group-target-acc').style.display = isTransferOrExchange ? 'flex' : 'none';
   document.getElementById('f-group-title').style.display = (type === 'expense' || type === 'income' || isAdjust) ? 'flex' : 'none';
   document.getElementById('f-group-category').style.display = (type === 'expense' || type === 'income') ? 'flex' : 'none';
   document.getElementById('f-group-stock').style.display = (type === 'buy' || type === 'sell' || type === 'dividend') ? 'flex' : 'none';
@@ -1155,13 +1162,11 @@ function switchTxTab(type) {
   document.getElementById('stock-commission-box').style.display = isDiv ? 'none' : 'flex';
 
   if (isAdjust) {
-    document.getElementById('f-group-from-currency').style.display = 'none';
-    document.getElementById('f-group-to-currency').style.display = 'none';
     document.getElementById('f-group-amount').style.display = 'flex';
     document.getElementById('f-group-exchange').style.display = 'none';
     document.getElementById('f-group-commission').style.display = 'none';
     document.getElementById('label-amount').innerText = '調整金額（正數增加 +，負數減少 -）';
-    document.getElementById('label-title').innerText = '調整標題 / 原因';
+    document.getElementById('label-title').innerText = '調整原因';
     if (!document.getElementById('tx-title').value.trim()) {
       document.getElementById('tx-title').value = '餘額調整';
     }
@@ -1177,8 +1182,6 @@ function switchTxTab(type) {
     populateTransferAccountSelects();
     updateTransferOrExchangeUI();
   } else if (!isAdjust) {
-    document.getElementById('f-group-from-currency').style.display = 'none';
-    document.getElementById('f-group-to-currency').style.display = 'none';
     document.getElementById('f-group-amount').style.display = (type === 'expense' || type === 'income') ? 'flex' : 'none';
     document.getElementById('label-amount').innerText = '金額';
     document.getElementById('f-group-exchange').style.display = 'none';
@@ -1186,6 +1189,7 @@ function switchTxTab(type) {
   }
 }
 
+/* 3. 帳戶選單排版優雅化（移除點號與括號，使用空格分離排版） */
 function populateGroupedAccountSelect(selectEl, selectedId = null, excludeAccId = null) {
   if (!selectEl) return;
   selectEl.innerHTML = '';
@@ -1200,7 +1204,7 @@ function populateGroupedAccountSelect(selectEl, selectedId = null, excludeAccId 
     grpAccounts.forEach(acc => {
       const opt = document.createElement('option');
       opt.value = acc.id;
-      opt.innerText = `${acc.name}   ·   ${acc.currency}`;
+      opt.innerText = `${acc.name}    ${acc.currency}`;
       if (selectedId === acc.id) opt.selected = true;
       optGroup.appendChild(opt);
     });
@@ -1242,13 +1246,14 @@ function rebuildToAccountOptions(preferredToId = null) {
   }
 }
 
+/* 1. 幣種選單純 3 字母 Code 化 */
 function populateCurrencyOptions(selectEl, selectedCode) {
   if (!selectEl) return;
   selectEl.innerHTML = '';
   SUPPORTED_CURRENCIES.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.code;
-    opt.innerText = `${c.code}   ·   ${c.name}`;
+    opt.innerText = c.code;
     if (c.code === selectedCode) opt.selected = true;
     selectEl.appendChild(opt);
   });
@@ -1264,8 +1269,6 @@ function updateTransferOrExchangeUI() {
   const fromCurSelect = document.getElementById('tx-from-currency');
   const toCurSelect = document.getElementById('tx-to-currency');
 
-  document.getElementById('f-group-from-currency').style.display = 'flex';
-  document.getElementById('f-group-to-currency').style.display = 'flex';
   document.getElementById('f-group-commission').style.display = 'flex';
 
   if (!fromCurSelect.value) {
@@ -1883,12 +1886,15 @@ function renderNetWorthChart() {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+/* 2. 所屬分組 (Group) 選單純顯示分組名稱 */
 function populateGroupSelect(selectedId = null) {
   const select = document.getElementById('acc-group-id');
+  if (!select) return;
   select.innerHTML = '';
   groups.forEach(grp => {
     const opt = document.createElement('option');
-    opt.value = grp.id; opt.innerText = `${grp.name} (${grp.currency || 'CAD'})`;
+    opt.value = grp.id;
+    opt.innerText = grp.name;
     if (selectedId === grp.id) opt.selected = true;
     select.appendChild(opt);
   });

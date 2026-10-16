@@ -78,17 +78,61 @@ header {
 }
 
 .header-left { display: flex; align-items: center; gap: 14px; }
-.net-worth-box { display: flex; flex-direction: column; cursor: pointer; }
-.net-worth-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
-.net-worth-amt { font-size: 19px; font-weight: 800; color: var(--text-main); }
 
-.sync-status {
-  font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 12px;
-  background: #EFECE6; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+/* 頂部 Net Worth 防斷行與 Sync Status 微標籤化 */
+.net-worth-box {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  white-space: nowrap; /* 強制不跌行 */
 }
-.sync-status.syncing { background: var(--macaron-cream); color: var(--macaron-cream-text); }
-.sync-status.synced { background: var(--macaron-mint); color: var(--macaron-mint-text); }
-.sync-status.error { background: var(--macaron-pink); color: var(--macaron-pink-text); }
+
+.net-worth-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.net-worth-amt {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+/* 下移後的 Sync Status 微標籤 */
+.sync-status {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  margin-top: 2px;
+  width: fit-content;
+}
+.sync-status.synced { color: #2D6A4F; }
+.sync-status.syncing { color: #8A6D1F; }
+.sync-status.error { color: #D95D5D; }
+
+/* 頂部純 Icon 按鈕樣式 */
+header .btn-action {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
 
 .app-container {
   flex: 1;
@@ -160,7 +204,18 @@ header {
   padding: 14px 20px;
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
-.btn-back { display: none; background: none; border: none; font-size: 15px; font-weight: 600; color: var(--text-main); cursor: pointer; }
+
+/* 返回、記帳與帳戶編輯按鈕樣式 */
+.btn-back { 
+  display: none; 
+  background: none; 
+  border: none; 
+  font-size: 20px; 
+  font-weight: 700; 
+  color: var(--text-main); 
+  cursor: pointer; 
+  padding: 4px 8px;
+}
 
 .btn-action {
   background: var(--text-main); color: white; border: none; padding: 7px 12px;
@@ -168,6 +223,14 @@ header {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;
 }
 .btn-secondary { background: var(--border-color); color: var(--text-main); }
+
+.detail-header .btn-action {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 15px;
+}
 
 .search-bar-wrap {
   padding: 6px 20px 10px 20px;
@@ -290,9 +353,42 @@ header {
 .modal-body { padding: 18px; display: flex; flex-direction: column; gap: 11px; max-height: 80vh; overflow-y: auto; }
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-.form-group input, .form-group select {
+
+/* 基礎 Input 樣式 */
+.form-group input {
   padding: 9px 11px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13.5px; background: #FAF9F6; outline: none;
 }
+
+/* 徹底移除舊式 Windows / 瀏覽器原生下拉選單樣式，對齊現代 iOS 柔和圓角與極簡小箭咀 */
+select, 
+.form-group select, 
+.form-row-inline select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #FAF9F6;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 32px 10px 12px;
+  font-size: 14px;
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+  box-shadow: none;
+  
+  /* 替換為現代極簡 iOS 風格向下小箭頭 */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8A99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+}
+
+select:focus,
+.form-group select:focus,
+.form-row-inline select:focus {
+  border-color: var(--text-main);
+}
+
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
 
 @media (max-width: 768px) {

@@ -52,18 +52,20 @@
       <div class="net-worth-box" onclick="openReportModal()" title="點擊檢視資產走勢">
         <span class="net-worth-title" id="header-networth-title">Net Worth (CAD 📈)</span>
         <span class="net-worth-amt" id="total-net-worth">$0.00</span>
-      </div>
-      <div class="sync-status" id="sync-status-indicator" onclick="manualSyncFromCloud()" title="點擊連線或重整雲端">
-        <span>☁️</span> <span id="sync-status-text">未連線（點擊設定）</span>
+        <!-- 下移之 Sync 狀態標籤 -->
+        <div class="sync-status" id="sync-status-indicator" onclick="event.stopPropagation(); manualSyncFromCloud();" title="點擊連線或重整雲端">
+          <span>☁️</span> <span id="sync-status-text">未連線（點擊設定）</span>
+        </div>
       </div>
     </div>
     <div style="display: flex; gap: 6px; align-items: center;">
+      <!-- 純 Icon 頂部按鈕 -->
       <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
-      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" style="position: relative; z-index: 1001;" title="上傳 Apple Wallet 截圖自動辨識">📷 截圖記帳</button>
+      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" style="position: relative; z-index: 1001;" title="截圖記帳">📷</button>
       
       <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
-      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()">📂 匯入 CSV</button>
-      <button type="button" class="btn-action btn-secondary" onclick="openSettingsModal()">⚙️ 設定</button>
+      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()" title="匯入 CSV">📁</button>
+      <button type="button" class="btn-action btn-secondary" onclick="openSettingsModal()" title="設定">⚙️</button>
     </div>
   </header>
 
@@ -80,21 +82,23 @@
       <div class="sticky-control-panel">
         <div class="detail-header">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <button class="btn-back" onclick="goBackToList()">‹ 返回</button>
+            <!-- 圖示化返回按鈕 -->
+            <button class="btn-back" onclick="goBackToList()" title="返回">‹</button>
             <div>
               <h2 id="current-account-name" style="font-size: 17px; font-weight: 700;">請選擇帳戶</h2>
               <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
             </div>
           </div>
           <div style="display: flex; gap: 8px;">
-            <button class="btn-action btn-secondary" onclick="openEditAccountModal()">⚙️ 帳戶</button>
-            <button class="btn-action" onclick="openTxModal()">+ 記一筆</button>
+            <!-- 圖示化編輯筆與加號按鈕 -->
+            <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
+            <button class="btn-action" onclick="openTxModal()" title="記一筆">＋</button>
           </div>
         </div>
 
         <div class="search-bar-wrap">
           <span>🔍</span>
-          <input type="text" class="search-input" id="tx-search-input" placeholder="搜尋交易商戶、分類、備註..." oninput="handleSearchInput(this.value)">
+          <input type="text" class="search-input" id="tx-search-input" placeholder="搜尋交易商戶、分類、備註、日期..." oninput="handleSearchInput(this.value)">
         </div>
 
         <div class="invest-subtabs" id="invest-subtabs" style="display: none;">
@@ -116,12 +120,12 @@
   <div class="modal-overlay" id="settings-modal">
     <div class="modal-card" style="max-width: 520px;">
       <div class="modal-header">
-        <span>⚙️ 系統設定 (Settings)</span>
+        <span>⚙️ 系統設定</span>
         <button onclick="closeModal('settings-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>全局 Net Worth 基準幣種 (Base Currency)</label>
+          <label>基準貨幣</label>
           <select id="setting-base-currency" onchange="changeBaseCurrency(this.value)"></select>
         </div>
         <div class="form-group">
@@ -134,7 +138,7 @@
         <hr style="border: none; border-top: 1px solid var(--border-color); margin: 6px 0;">
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Categories 分類管理</label>
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">分類管理</label>
             <button class="btn-action" style="padding: 4px 10px; font-size: 11px;" onclick="openAddCategoryModal(null)">+ 新增父類別</button>
           </div>
           <div class="type-tabs" style="margin-bottom: 8px;">
@@ -166,24 +170,26 @@
           <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為未還 / Pending（置頂釘選）</label>
         </div>
 
-        <div class="form-group" id="f-group-from-acc">
-          <label id="label-from-acc">帳戶 (Account)</label>
-          <select id="tx-from-acc" onchange="handleFromAccountChange()"></select>
+        <!-- 轉出列（單純帳戶或轉帳/換匯轉出列一行並排） -->
+        <div id="f-group-from-container">
+          <div class="form-group" id="f-group-single-acc">
+            <label id="label-from-acc">帳戶</label>
+          </div>
+          <div class="form-row-inline" id="f-row-from" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+            <select id="tx-from-acc" style="flex: 2;" onchange="handleFromAccountChange()"></select>
+            <select id="tx-from-currency" style="flex: 1; display: none;" onchange="handleFromCurrencyChange()"></select>
+          </div>
         </div>
 
-        <div class="form-group" id="f-group-from-currency" style="display: none;">
-          <label>轉出來源幣種 (From Currency)</label>
-          <select id="tx-from-currency" onchange="handleFromCurrencyChange()"></select>
-        </div>
-
-        <div class="form-group" id="f-group-target-acc" style="display: none;">
-          <label>轉入目標帳戶 (To Account)</label>
-          <select id="tx-target-acc" onchange="handleToAccountChange()"></select>
-        </div>
-
-        <div class="form-group" id="f-group-to-currency" style="display: none;">
-          <label>轉入目標幣種 (To Currency)</label>
-          <select id="tx-to-currency" onchange="handleToCurrencyChange()"></select>
+        <!-- 轉入列（轉帳/換匯轉入列一行並排） -->
+        <div id="f-group-target-container" style="display: none;">
+          <div class="form-group">
+            <label>轉入戶口</label>
+          </div>
+          <div class="form-row-inline" id="f-row-target" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+            <select id="tx-target-acc" style="flex: 2;" onchange="handleToAccountChange()"></select>
+            <select id="tx-to-currency" style="flex: 1;" onchange="handleToCurrencyChange()"></select>
+          </div>
         </div>
 
         <div class="form-group" id="f-group-title">
@@ -192,7 +198,7 @@
         </div>
 
         <div class="form-group" id="f-group-category">
-          <label>Category (分類)</label>
+          <label>分類</label>
           <select id="tx-category"></select>
         </div>
 
@@ -203,15 +209,15 @@
 
         <div id="f-group-exchange" style="display: none; display: flex; flex-direction: column; gap: 12px;">
           <div class="form-group">
-            <label id="label-from-amount">轉出金額 (From Amount)</label>
+            <label id="label-from-amount">轉出金額</label>
             <input type="number" step="0.01" id="tx-from-amount" placeholder="0.00" oninput="handleExchangeInput('from')">
           </div>
           <div class="form-group">
-            <label id="label-to-amount">轉入金額 (To Amount)</label>
+            <label id="label-to-amount">轉入金額</label>
             <input type="number" step="0.01" id="tx-to-amount" placeholder="0.00" oninput="handleExchangeInput('to')">
           </div>
           <div class="form-group">
-            <label>匯率 (Rate: 1 From = ? To)</label>
+            <label>匯率</label>
             <div style="display: flex; gap: 8px;">
               <input type="number" step="0.0001" id="tx-exchange-rate" placeholder="0.0000" style="flex: 1;" oninput="handleExchangeInput('rate')">
               <button class="btn-action btn-secondary" type="button" onclick="fetchLiveExchangeRate(true)">🌐 即時匯率</button>
@@ -220,32 +226,32 @@
         </div>
 
         <div class="form-group" id="f-group-commission" style="display: none;">
-          <label>手續費 (Commission - 可選)</label>
+          <label>手續費</label>
           <input type="number" step="0.01" id="tx-commission" placeholder="0.00">
         </div>
 
         <div id="f-group-stock" style="display: none; display: flex; flex-direction: column; gap: 12px;">
           <div class="form-group">
-            <label>股票代號 (Symbol)</label>
+            <label>股票代號</label>
             <div style="display: flex; gap: 8px;">
               <input type="text" id="tx-stock-symbol" placeholder="例如：HXT.TO / AAPL" oninput="this.value = this.value.toUpperCase()" style="flex: 1;">
               <button class="btn-action btn-secondary" id="btn-quote-search" type="button" onclick="fetchQuoteForInput()">🔍 查 Yahoo 市價</button>
             </div>
           </div>
           <div class="form-group" id="stock-shares-box">
-            <label>股數 (Shares)</label>
+            <label>股數</label>
             <input type="number" step="0.0001" id="tx-stock-shares" placeholder="0" oninput="calcStockTotal()">
           </div>
           <div class="form-group" id="stock-price-box">
-            <label>每股價格 (Price per share)</label>
+            <label>每股價格</label>
             <input type="number" step="0.01" id="tx-stock-price" placeholder="0.00" oninput="calcStockTotal()">
           </div>
           <div class="form-group" id="label-stock-total">
-            <label>總結算金額 (Gross Proceeds / Cost)</label>
+            <label>總結算金額</label>
             <input type="number" step="0.01" id="tx-stock-total" placeholder="0.00">
           </div>
           <div class="form-group" id="stock-commission-box">
-            <label>佣金/手續費 (Commission)</label>
+            <label>手續費</label>
             <input type="number" step="0.01" id="tx-stock-commission" placeholder="0.00">
           </div>
         </div>
@@ -305,22 +311,21 @@
           <input type="text" id="acc-name" placeholder="例如：Amex Cobalt / Wealthsimple">
         </div>
         <div class="form-group">
-          <label>貨幣單位 (Currency)</label>
+          <label>貨幣單位</label>
           <select id="acc-currency"></select>
         </div>
         <div class="form-group">
-          <label>所屬分組 (Group)</label>
+          <label>所屬分組</label>
           <select id="acc-group-id"></select>
         </div>
         <div class="form-group">
           <label>帳戶類型</label>
           <select id="acc-type">
-            <option value="checking">Checking (日常支票戶口)</option>
-            <option value="savings">Savings (儲蓄戶口)</option>
-            <option value="credit">Credit Card (信用卡)</option>
-            <option value="investment">Investment / Brokerage (證券投資)</option>
-            <option value="crypto">Crypto (加密貨幣)</option>
-            <option value="cash">Cash (現金)</option>
+            <option value="checking">Checking</option>
+            <option value="savings">Savings</option>
+            <option value="credit">Credit Card</option>
+            <option value="investment">Investment</option>
+            <option value="cash">Cash</option>
           </select>
         </div>
         <div class="form-group">
@@ -350,11 +355,11 @@
           <input type="text" id="group-name" placeholder="例如：Everyday Banking">
         </div>
         <div class="form-group">
-          <label>分組結算幣種 (Group Currency)</label>
+          <label>分組結算幣種</label>
           <select id="group-currency"></select>
         </div>
         <div class="form-group">
-          <label>馬卡龍主題色板 (點擊選取)</label>
+          <label>主題顏色</label>
           <div class="color-swatch-picker" id="group-swatch-picker"></div>
         </div>
       </div>
