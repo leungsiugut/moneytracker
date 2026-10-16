@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MoneyTracker</title>
 
   <!-- iOS PWA 獨立 App 配置與 Meta Tags -->
@@ -62,10 +62,21 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; }
 
+    /* iOS Safe Area 頂部狀態列 / 動態島避讓 */
     header {
-      height: 60px; background: var(--card-bg); border-bottom: 1px solid var(--border-color);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 16px; gap: 12px;
-      position: relative; z-index: 100;
+      background: var(--card-bg); 
+      border-bottom: 1px solid var(--border-color);
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 0px;
+      height: calc(60px + env(safe-area-inset-top, 0px));
+      gap: 12px;
+      position: relative; 
+      z-index: 100;
     }
     .header-left { display: flex; align-items: center; gap: 14px; }
     .net-worth-box { display: flex; flex-direction: column; cursor: pointer; }
@@ -80,7 +91,10 @@
     .sync-status.synced { background: var(--macaron-mint); color: var(--macaron-mint-text); }
     .sync-status.error { background: var(--macaron-pink); color: var(--macaron-pink-text); }
 
-    .app-container { display: flex; height: calc(100vh - 60px); }
+    .app-container { 
+      display: flex; 
+      height: calc(100vh - (60px + env(safe-area-inset-top, 0px))); 
+    }
 
     .sidebar {
       width: 360px; min-width: 310px; border-right: 1px solid var(--border-color);
@@ -112,10 +126,10 @@
       border-radius: 11px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.15s ease;
     }
     .account-item:hover, .account-item.active { background: #FFFFFF; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
-    .account-info { display: flex; flex-direction: column; gap: 2px; }
-    .account-name { font-size: 13px; font-weight: 600; }
+    .account-name { font-size: 13.5px; font-weight: 600; }
     .account-balance { font-size: 13px; font-weight: 700; }
 
+    /* iOS Modern 徽章質感圖示框 */
     .account-icon-badge {
       width: 36px;
       height: 36px;
@@ -183,18 +197,31 @@
       display: flex; justify-content: space-between; align-items: center;
       padding: 10px 12px; margin-bottom: 5px; border: 1px solid var(--border-color);
       border-radius: 11px; cursor: pointer; background: #FFFFFF; transition: all 0.15s ease;
+      gap: 10px;
     }
     .tx-item.pending-item { background: var(--macaron-orange); border-color: rgba(217, 93, 93, 0.2); }
-    .tx-left { display: flex; align-items: center; gap: 10px; }
-    .tx-tag { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; background: rgba(0,0,0,0.04); }
-    .tx-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-    .tx-sub { font-size: 11px; color: var(--text-muted); }
-    .tx-amt { font-size: 13.5px; font-weight: 700; }
+    .tx-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .tx-tag { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; background: rgba(0,0,0,0.04); }
+    .tx-content { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .tx-title { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-sub-date { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+    .tx-sub-cat { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
+    .tx-cat-chip { background: rgba(0,0,0,0.04); padding: 1px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; }
+
+    /* 右側金額與幣種同一行對齊（禁止折行） */
+    .tx-amt { 
+      font-size: 13.5px; 
+      font-weight: 700; 
+      white-space: nowrap; 
+      flex-shrink: 0; 
+      text-align: right; 
+      letter-spacing: -0.2px;
+    }
     .tx-amt.expense { color: #D95D5D; }
     .tx-amt.income { color: #2D6A4F; }
     .tx-amt.transfer { color: #2B5C8F; }
 
-    .flag-toggle-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px; opacity: 0.3; transition: opacity 0.2s; }
+    .flag-toggle-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px; opacity: 0.3; transition: opacity 0.2s; flex-shrink: 0; }
     .flag-toggle-btn.flagged { opacity: 1; }
 
     .holding-card {
@@ -229,7 +256,7 @@
 
     .back-to-top-btn {
       position: fixed;
-      bottom: 24px;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
       right: 24px;
       width: 44px;
       height: 44px;
@@ -395,8 +422,8 @@
           <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為未還 / Pending（置頂釘選）</label>
         </div>
 
-        <div class="form-group" id="f-group-from-acc" style="display: none;">
-          <label>轉出戶口 (From Account)</label>
+        <div class="form-group" id="f-group-from-acc">
+          <label id="label-from-acc">帳戶 (Account)</label>
           <select id="tx-from-acc" onchange="handleFromAccountChange()"></select>
         </div>
 
@@ -487,7 +514,7 @@
       <div class="modal-footer">
         <button class="btn-action btn-secondary" id="btn-delete-tx" onclick="deleteCurrentTx()" style="display:none; color:#D95D5D;">刪除</button>
         <button class="btn-action btn-secondary" onclick="closeModal('tx-modal')">取消</button>
-        <button class="btn-action" onclick="saveTransaction()">儲存</button>
+        <button class="btn-action" onclick="saveTransaction()">確認儲存</button>
       </div>
     </div>
   </div>
@@ -645,7 +672,6 @@
       }
     };
 
-    /* 安全方案 B：預設 URL 留空，優先由 LocalStorage 讀取 */
     const DEFAULT_SCRIPT_URL = "";
     let SCRIPT_URL = localStorage.getItem('wiz_gas_url') || DEFAULT_SCRIPT_URL;
 
@@ -868,9 +894,13 @@
       pushToGoogleSheet();
     }
 
+    /* 嚴格格式化日期為 YYYY-MM-DD，防禦去除 ISO 時區後綴 (如 T04:00:00.000Z) */
     function normalizeDateString(dateStr) {
       if (!dateStr) return new Date().toISOString().split('T')[0];
       dateStr = dateStr.toString().trim().replace(/"/g, '');
+      if (dateStr.includes('T')) {
+        dateStr = dateStr.split('T')[0];
+      }
 
       if (/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(dateStr)) {
         const parts = dateStr.split(/[\/-]/);
@@ -1109,6 +1139,7 @@
       }
     }
 
+    /* 截圖記帳（Receipt OCR）防呆與確認工作流重構 */
     async function handleOCRImageSelected(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
@@ -1127,11 +1158,34 @@
         const textLines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
         const guessedTitle = textLines.length > 0 ? textLines[0] : 'Wallet 交易';
 
+        // 嘗試從文字中找出常見日期
+        let guessedDate = new Date().toISOString().split('T')[0];
+        const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
+        if (dateMatch) {
+          guessedDate = normalizeDateString(dateMatch[1]);
+        }
+
         setSyncStatus('synced', '辨識完成');
+
+        // 自動喚起「+ 記一筆」彈窗，絕不直接靜默入庫
         openTxModal();
+        switchTxTab('expense');
+
         if (amount) document.getElementById('tx-amount').value = amount;
         if (guessedTitle) document.getElementById('tx-title').value = guessedTitle;
-        alert(`已辨識截圖內容：\n商戶：${guessedTitle}\n金額：$${amount || '請手動輸入'}`);
+        if (guessedDate) document.getElementById('tx-date').value = guessedDate;
+
+        // 若身處總覽或特定帳戶，預設對應帳戶
+        const fromSelect = document.getElementById('tx-from-acc');
+        if (fromSelect) {
+          if (currentAccountId) {
+            fromSelect.value = currentAccountId;
+          } else if (accounts.length > 0) {
+            fromSelect.value = accounts[0].id;
+          }
+          handleFromAccountChange();
+        }
+
       } catch (err) {
         console.error('OCR failed:', err);
         setSyncStatus('error', 'OCR 辨識失敗');
@@ -1381,12 +1435,13 @@
           const item = document.createElement('div');
           item.className = `account-item ${acc.id === currentAccountId ? 'active' : ''}`;
           item.onclick = () => selectAccount(acc.id);
+          
+          // 移除左側重複的幣種標籤，化繁為簡
           item.innerHTML = `
             <div style="display: flex; align-items: center;">
               <div class="account-icon-badge">${icon}</div>
               <div class="account-info">
                 <span class="account-name">${acc.name}</span>
-                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">${acc.currency}</span>
               </div>
             </div>
             <span class="account-balance">${fmtCur(accVal, acc.currency)}</span>
@@ -1539,7 +1594,8 @@
 
       const monthsMap = {};
       regularTxs.forEach(t => {
-        const ym = (t.date || '').slice(0, 7) || 'Other';
+        const rawDate = normalizeDateString(t.date);
+        const ym = (rawDate || '').slice(0, 7) || 'Other';
         if (!monthsMap[ym]) monthsMap[ym] = [];
         monthsMap[ym].push(t);
       });
@@ -1566,13 +1622,15 @@
       });
     }
 
+    /* 交易明細分層渲染：日期獨立一行，Category 獨立一行，金額永遠同行不折行 */
     function createTxElement(tx, currentAcc) {
       const item = document.createElement('div');
       item.className = `tx-item ${tx.isPending ? 'pending-item' : ''}`;
 
       let icon = '📝';
       let title = tx.title || '交易';
-      let sub = `${tx.date}`;
+      const cleanDate = normalizeDateString(tx.date);
+      let catBadgeHtml = '';
       let amtClass = 'expense';
       let amtStr = '';
 
@@ -1583,6 +1641,7 @@
       if (tx.type === 'adjust') {
         icon = '⚖️';
         title = tx.title || '餘額調整';
+        catBadgeHtml = `<span class="tx-cat-chip">⚖️ 調整項目</span>`;
         const numAmt = Number(tx.amount) || 0;
         if (numAmt >= 0) {
           amtClass = 'income';
@@ -1596,7 +1655,8 @@
         if (cat) {
           icon = cat.icon || '🏷️';
           const parent = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
-          sub += ` • ${parent ? parent.name + ' > ' : ''}${cat.name}`;
+          const catFullName = `${parent ? parent.name + ' > ' : ''}${cat.name}`;
+          catBadgeHtml = `<span class="tx-cat-chip">${cat.icon || '🏷️'} ${catFullName}</span>`;
         }
         amtClass = tx.type;
         amtStr = (tx.type === 'expense' ? '-' : '+') + fmtCur(Number(tx.amount), displayCur);
@@ -1610,17 +1670,18 @@
           title = `轉帳至 ${toAcc ? toAcc.name : ''}`;
           amtClass = 'expense';
           amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-          if (comm > 0) sub += ` • 含手續費 ${fmtCur(comm, displayCur)}`;
+          let note = comm > 0 ? `含手續費 ${fmtCur(comm, displayCur)}` : '';
           if (tx.toCurrency && tx.toCurrency !== tx.currency) {
-            sub += ` • 實收 ${fmtCur(Number(tx.toAmount || tx.amount), tx.toCurrency)}`;
+            note += (note ? ' • ' : '') + `實收 ${fmtCur(Number(tx.toAmount || tx.amount), tx.toCurrency)}`;
           }
+          if (note) catBadgeHtml = `<span class="tx-cat-chip">🔁 ${note}</span>`;
         } else {
           title = `由 ${fromAcc ? fromAcc.name : ''} 轉入`;
           amtClass = 'income';
           const incomingAmt = Number(tx.toAmount || tx.amount);
           amtStr = `+${fmtCur(incomingAmt, displayCur)}`;
           if (tx.currency && tx.currency !== tx.toCurrency) {
-            sub += ` • 轉出 ${fmtCur(Number(tx.amount), tx.currency)}`;
+            catBadgeHtml = `<span class="tx-cat-chip">🔁 轉出 ${fmtCur(Number(tx.amount), tx.currency)}</span>`;
           }
         }
       } else if (tx.type === 'exchange') {
@@ -1634,13 +1695,13 @@
           title = `貨幣兌換 (${tx.currency || '原幣'} ➔ ${tx.toCurrency || '目標幣'})`;
           amtClass = 'transfer';
           amtStr = `-${fmtCur(Number(tx.amount) + comm, tx.currency)} ➔ +${fmtCur(Number(tx.toAmount), tx.toCurrency)}`;
-          sub += ` • 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}`;
+          catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}</span>`;
         } else {
           if (tx.accountId === currentAcc.id) {
             title = `兌換至 ${toAcc ? toAcc.name : ''}`;
             amtClass = 'transfer';
             amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-            sub += ` • 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}`;
+            catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}</span>`;
           } else {
             title = `由 ${fromAcc ? fromAcc.name : ''} 存入`;
             amtClass = 'income';
@@ -1652,6 +1713,7 @@
         title = `買入 ${tx.symbol} (${tx.shares} 股 @ $${tx.price})`;
         amtClass = 'expense';
         amtStr = `-${fmtCur(Number(tx.amount) + (Number(tx.commission) || 0), displayCur)}`;
+        catBadgeHtml = `<span class="tx-cat-chip">📈 證券買入</span>`;
       } else if (tx.type === 'sell') {
         icon = '📉';
         const comm = Number(tx.commission) || 0;
@@ -1659,19 +1721,22 @@
         const netProceeds = Number(tx.amount) - comm;
         amtClass = 'income';
         amtStr = `+${fmtCur(netProceeds, displayCur)}`;
+        catBadgeHtml = `<span class="tx-cat-chip">📉 證券賣出</span>`;
       } else if (tx.type === 'dividend') {
         icon = '📊';
         title = `收到 ${tx.symbol} 現金股息`;
         amtClass = 'income';
         amtStr = `+${fmtCur(Number(tx.amount), displayCur)}`;
+        catBadgeHtml = `<span class="tx-cat-chip">📊 股息入帳</span>`;
       }
 
       item.innerHTML = `
         <div class="tx-left" onclick="openEditTxModal('${tx.id}')">
           <div class="tx-tag">${icon}</div>
-          <div>
+          <div class="tx-content">
             <div class="tx-title">${title}</div>
-            <div class="tx-sub">${sub}</div>
+            <div class="tx-sub-date">${cleanDate}</div>
+            ${catBadgeHtml ? `<div class="tx-sub-cat">${catBadgeHtml}</div>` : ''}
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -1722,7 +1787,10 @@
       const isTransferOrExchange = (isTransfer || isExchange);
       const isAdjust = (type === 'adjust');
 
-      document.getElementById('f-group-from-acc').style.display = isTransferOrExchange ? 'flex' : 'none';
+      // 永遠保持 From Account 可見，允許用戶彈性指定扣款帳戶
+      document.getElementById('f-group-from-acc').style.display = 'flex';
+      document.getElementById('label-from-acc').innerText = isTransferOrExchange ? '轉出戶口 (From Account)' : '帳戶 (Account)';
+
       document.getElementById('f-group-target-acc').style.display = isTransferOrExchange ? 'flex' : 'none';
       document.getElementById('f-group-title').style.display = (type === 'expense' || type === 'income' || isAdjust) ? 'flex' : 'none';
       document.getElementById('f-group-category').style.display = (type === 'expense' || type === 'income') ? 'flex' : 'none';
@@ -1947,9 +2015,8 @@
     }
 
     function openTxModal() {
-      if (!currentAccountId) { alert('請先選擇帳戶！'); return; }
-      const acc = accounts.find(a => a.id === currentAccountId);
-      const isInvest = acc.type === 'investment';
+      const defaultAcc = accounts.find(a => a.id === currentAccountId) || accounts[0];
+      const isInvest = defaultAcc && defaultAcc.type === 'investment';
 
       ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
        'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
@@ -1963,11 +2030,15 @@
       document.getElementById('tx-modal-title').innerText = '記一筆交易';
 
       setupModalTypeTabs(isInvest);
-      populateTransferAccountSelects(currentAccountId);
+      populateTransferAccountSelects(defaultAcc ? defaultAcc.id : null);
 
-      const targetAcc = accounts.find(a => a.id !== currentAccountId) || acc;
-      populateCurrencyOptions(document.getElementById('tx-from-currency'), acc.currency);
-      populateCurrencyOptions(document.getElementById('tx-to-currency'), targetAcc.currency);
+      const targetAcc = accounts.find(a => a.id !== (defaultAcc ? defaultAcc.id : '')) || defaultAcc;
+      if (defaultAcc) {
+        populateCurrencyOptions(document.getElementById('tx-from-currency'), defaultAcc.currency);
+      }
+      if (targetAcc) {
+        populateCurrencyOptions(document.getElementById('tx-to-currency'), targetAcc.currency);
+      }
 
       switchTxTab(isInvest ? 'buy' : 'expense');
       openModal('tx-modal');
@@ -1976,7 +2047,7 @@
     function openEditTxModal(txId) {
       const tx = transactions.find(t => t.id === txId);
       if (!tx) return;
-      const acc = accounts.find(a => a.id === currentAccountId);
+      const acc = accounts.find(a => a.id === tx.accountId) || accounts[0];
       const isInvest = acc && acc.type === 'investment';
 
       ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
@@ -1992,13 +2063,12 @@
       
       setupModalTypeTabs(isInvest);
       
-      if (tx.type === 'transfer' || tx.type === 'exchange') {
-        populateTransferAccountSelects(tx.accountId, tx.toAccountId);
-        const fromAcc = accounts.find(a => a.id === tx.accountId);
-        const toAcc = accounts.find(a => a.id === tx.toAccountId);
-        populateCurrencyOptions(document.getElementById('tx-from-currency'), tx.currency || fromAcc?.currency || 'CAD');
-        populateCurrencyOptions(document.getElementById('tx-to-currency'), tx.toCurrency || toAcc?.currency || 'CAD');
-      }
+      populateTransferAccountSelects(tx.accountId, tx.toAccountId);
+      const fromAcc = accounts.find(a => a.id === tx.accountId);
+      const toAcc = accounts.find(a => a.id === tx.toAccountId);
+      populateCurrencyOptions(document.getElementById('tx-from-currency'), tx.currency || fromAcc?.currency || 'CAD');
+      populateCurrencyOptions(document.getElementById('tx-to-currency'), tx.toCurrency || toAcc?.currency || 'CAD');
+
       switchTxTab(tx.type);
 
       if (tx.type === 'adjust') {
@@ -2036,22 +2106,19 @@
         document.getElementById('tx-stock-total').value = tx.amount;
       }
 
-      document.getElementById('tx-date').value = tx.date;
+      document.getElementById('tx-date').value = normalizeDateString(tx.date);
       document.getElementById('btn-delete-tx').style.display = 'inline-block';
       openModal('tx-modal');
     }
 
     function saveTransaction() {
       const id = document.getElementById('tx-id').value;
-      const date = document.getElementById('tx-date').value || new Date().toISOString().split('T')[0];
+      const date = normalizeDateString(document.getElementById('tx-date').value);
       const isPending = document.getElementById('tx-is-pending').checked;
       
-      const isTransferOrExchange = (currentTxType === 'transfer' || currentTxType === 'exchange');
-      const activeAccountId = isTransferOrExchange 
-        ? document.getElementById('tx-from-acc').value 
-        : currentAccountId;
-
+      const activeAccountId = document.getElementById('tx-from-acc').value || currentAccountId || (accounts[0] ? accounts[0].id : '');
       const activeAcc = accounts.find(a => a.id === activeAccountId);
+
       let txData = { 
         id: id || 'tx-' + Date.now(), 
         type: currentTxType, 
@@ -2423,7 +2490,7 @@
           runningNetWorth -= convertAmount(Number(t.commission), cur, baseCurrency);
         }
 
-        dates.push(t.date);
+        dates.push(normalizeDateString(t.date));
         netWorthValues.push(runningNetWorth);
       });
 
