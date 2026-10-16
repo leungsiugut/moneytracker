@@ -60,24 +60,38 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; }
+    
+    /* 視窗與頂部 Header 佈局修復（解決動態島遮擋與按鈕點擊失效） */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+    }
 
-    /* iOS Safe Area 頂部狀態列 / 動態島避讓 */
     header {
-      background: var(--card-bg); 
+      flex-shrink: 0;
+      box-sizing: border-box;
+      background: var(--card-bg);
       border-bottom: 1px solid var(--border-color);
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      padding-top: env(safe-area-inset-top, 0px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding-left: 16px;
       padding-right: 16px;
-      padding-bottom: 0px;
-      height: calc(60px + env(safe-area-inset-top, 0px));
-      gap: 12px;
-      position: relative; 
-      z-index: 100;
+      padding-bottom: 10px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      min-height: calc(60px + env(safe-area-inset-top));
+      position: relative;
+      z-index: 1000;
     }
+
     .header-left { display: flex; align-items: center; gap: 14px; }
     .net-worth-box { display: flex; flex-direction: column; cursor: pointer; }
     .net-worth-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
@@ -91,9 +105,11 @@
     .sync-status.synced { background: var(--macaron-mint); color: var(--macaron-mint-text); }
     .sync-status.error { background: var(--macaron-pink); color: var(--macaron-pink-text); }
 
-    .app-container { 
-      display: flex; 
-      height: calc(100vh - (60px + env(safe-area-inset-top, 0px))); 
+    .app-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
     }
 
     .sidebar {
@@ -129,7 +145,6 @@
     .account-name { font-size: 13.5px; font-weight: 600; }
     .account-balance { font-size: 13px; font-weight: 700; }
 
-    /* iOS Modern 徽章質感圖示框 */
     .account-icon-badge {
       width: 36px;
       height: 36px;
@@ -208,7 +223,6 @@
     .tx-sub-cat { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
     .tx-cat-chip { background: rgba(0,0,0,0.04); padding: 1px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; }
 
-    /* 右側金額與幣種同一行對齊（禁止折行） */
     .tx-amt { 
       font-size: 13.5px; 
       font-weight: 700; 
@@ -304,6 +318,11 @@
 </head>
 <body>
 
+  <!-- PWA 下拉刷新提示指示器 -->
+  <div id="pwa-pull-indicator" style="position: fixed; top: 0; left: 0; right: 0; height: 50px; display: none; align-items: center; justify-content: center; background: rgba(52, 58, 64, 0.9); color: #FFC107; font-size: 13px; font-weight: 700; z-index: 9999; transition: transform 0.2s ease;">
+    <span>🔄 放開以重新整理網頁...</span>
+  </div>
+
   <header>
     <div class="header-left">
       <div class="net-worth-box" onclick="openReportModal()" title="點擊檢視資產走勢">
@@ -315,11 +334,14 @@
       </div>
     </div>
     <div style="display: flex; gap: 6px; align-items: center;">
+      <!-- OCR 圖片上傳 -->
       <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
-      <button class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" title="上傳 Apple Wallet 截圖自動辨識">📷 截圖記帳</button>
+      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" style="position: relative; z-index: 1001;" title="上傳 Apple Wallet 截圖自動辨識">📷 截圖記帳</button>
+      
+      <!-- CSV 匯入 -->
       <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
-      <button class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()">📂 匯入 CSV</button>
-      <button class="btn-action btn-secondary" onclick="openSettingsModal()">⚙️ 設定</button>
+      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()">📂 匯入 CSV</button>
+      <button type="button" class="btn-action btn-secondary" onclick="openSettingsModal()">⚙️ 設定</button>
     </div>
   </header>
 
@@ -601,7 +623,6 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="group-id">
-        <input type="hidden" id="group-theme" value="pink">
         <div class="form-group">
           <label>分組名稱</label>
           <input type="text" id="group-name" placeholder="例如：Everyday Banking">
@@ -894,7 +915,6 @@
       pushToGoogleSheet();
     }
 
-    /* 嚴格格式化日期為 YYYY-MM-DD，防禦去除 ISO 時區後綴 (如 T04:00:00.000Z) */
     function normalizeDateString(dateStr) {
       if (!dateStr) return new Date().toISOString().split('T')[0];
       dateStr = dateStr.toString().trim().replace(/"/g, '');
@@ -1139,7 +1159,7 @@
       }
     }
 
-    /* 截圖記帳（Receipt OCR）防呆與確認工作流重構 */
+    /* 截圖 OCR 辨識記帳工作流優化 */
     async function handleOCRImageSelected(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
@@ -1155,34 +1175,30 @@
         const amtMatch = fullText.match(/\$\s*(\d+[\.,]\d{2})/);
         const amount = amtMatch ? amtMatch[1].replace(',', '.') : '';
 
-        const textLines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
+        const textLines = fullText.split('\n')
+          .map(l => l.trim())
+          .filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
         const guessedTitle = textLines.length > 0 ? textLines[0] : 'Wallet 交易';
-
-        // 嘗試從文字中找出常見日期
-        let guessedDate = new Date().toISOString().split('T')[0];
-        const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
-        if (dateMatch) {
-          guessedDate = normalizeDateString(dateMatch[1]);
-        }
 
         setSyncStatus('synced', '辨識完成');
 
-        // 自動喚起「+ 記一筆」彈窗，絕不直接靜默入庫
+        // 智能預設帳戶 ID
+        let targetAccId = currentAccountId;
+        if (!targetAccId && accounts.length > 0) {
+          targetAccId = accounts[0].id;
+        }
+
+        // 打開記帳彈窗並帶入辨識資料
         openTxModal();
         switchTxTab('expense');
 
         if (amount) document.getElementById('tx-amount').value = amount;
         if (guessedTitle) document.getElementById('tx-title').value = guessedTitle;
-        if (guessedDate) document.getElementById('tx-date').value = guessedDate;
 
-        // 若身處總覽或特定帳戶，預設對應帳戶
-        const fromSelect = document.getElementById('tx-from-acc');
-        if (fromSelect) {
-          if (currentAccountId) {
-            fromSelect.value = currentAccountId;
-          } else if (accounts.length > 0) {
-            fromSelect.value = accounts[0].id;
-          }
+        // 若記帳彈窗內有帳戶選取器，確保同步選中 targetAccId
+        const modalAccSelect = document.getElementById('tx-from-acc');
+        if (modalAccSelect && targetAccId) {
+          modalAccSelect.value = targetAccId;
           handleFromAccountChange();
         }
 
@@ -1436,7 +1452,6 @@
           item.className = `account-item ${acc.id === currentAccountId ? 'active' : ''}`;
           item.onclick = () => selectAccount(acc.id);
           
-          // 移除左側重複的幣種標籤，化繁為簡
           item.innerHTML = `
             <div style="display: flex; align-items: center;">
               <div class="account-icon-badge">${icon}</div>
@@ -1622,7 +1637,6 @@
       });
     }
 
-    /* 交易明細分層渲染：日期獨立一行，Category 獨立一行，金額永遠同行不折行 */
     function createTxElement(tx, currentAcc) {
       const item = document.createElement('div');
       item.className = `tx-item ${tx.isPending ? 'pending-item' : ''}`;
@@ -1787,7 +1801,6 @@
       const isTransferOrExchange = (isTransfer || isExchange);
       const isAdjust = (type === 'adjust');
 
-      // 永遠保持 From Account 可見，允許用戶彈性指定扣款帳戶
       document.getElementById('f-group-from-acc').style.display = 'flex';
       document.getElementById('label-from-acc').innerText = isTransferOrExchange ? '轉出戶口 (From Account)' : '帳戶 (Account)';
 
@@ -1833,6 +1846,7 @@
       }
     }
 
+    /* 帳戶 Drop-down 下拉選單排版優化：拿走括號，改用簡約分隔點 · 與空白 */
     function populateGroupedAccountSelect(selectEl, selectedId = null, excludeAccId = null) {
       if (!selectEl) return;
       selectEl.innerHTML = '';
@@ -1847,7 +1861,7 @@
         grpAccounts.forEach(acc => {
           const opt = document.createElement('option');
           opt.value = acc.id;
-          opt.innerText = `${acc.name} (${acc.currency})`;
+          opt.innerText = `${acc.name}   ·   ${acc.currency}`;
           if (selectedId === acc.id) opt.selected = true;
           optGroup.appendChild(opt);
         });
@@ -1895,7 +1909,7 @@
       SUPPORTED_CURRENCIES.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.code;
-        opt.innerText = `${c.code} - ${c.name}`;
+        opt.innerText = `${c.code}   ·   ${c.name}`;
         if (c.code === selectedCode) opt.selected = true;
         selectEl.appendChild(opt);
       });
@@ -2649,6 +2663,52 @@
       closeModal('group-modal');
       saveData();
     }
+
+    // PWA 下拉刷新手勢監聽與強刷邏輯
+    let touchStartY = 0;
+    let isPulling = false;
+    const pullIndicator = document.getElementById('pwa-pull-indicator');
+
+    window.addEventListener('touchstart', (e) => {
+      const scrollEl = document.querySelector('.main-detail') || document.querySelector('.sidebar') || window;
+      const currentScrollTop = scrollEl.scrollTop !== undefined ? scrollEl.scrollTop : window.scrollY;
+
+      if (currentScrollTop <= 0 && e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+        isPulling = true;
+      } else {
+        isPulling = false;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isPulling) return;
+      const currentY = e.touches[0].clientY;
+      const pullDistance = currentY - touchStartY;
+
+      if (pullDistance > 40) {
+        pullIndicator.style.display = 'flex';
+        pullIndicator.style.transform = `translateY(${Math.min(pullDistance - 40, 50)}px)`;
+      } else {
+        pullIndicator.style.display = 'none';
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (!isPulling) return;
+      const touchEndY = e.changedTouches[0].clientY;
+      const pullDistance = touchEndY - touchStartY;
+      isPulling = false;
+
+      if (pullDistance > 70) {
+        pullIndicator.innerHTML = '<span>⏳ 正在重新載入最新頁面...</span>';
+        setTimeout(() => {
+          window.location.href = window.location.pathname + '?v=' + Date.now();
+        }, 200);
+      } else {
+        pullIndicator.style.display = 'none';
+      }
+    }, { passive: true });
 
     initCurrencyDropdowns();
     updateFXRates(baseCurrency);
