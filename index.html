@@ -72,8 +72,8 @@
   <div class="app-container">
     <div class="sidebar">
       <div class="sidebar-actions">
-        <button class="btn-action" style="flex:1;" onclick="openAccountModal()">+ 新增 Account</button>
-        <button class="btn-action btn-secondary" style="flex:1;" onclick="openGroupModal()">+ 新增 Group</button>
+        <button type="button" class="btn-action" style="flex:1;" onclick="openAccountModal()">+ 新增 Account</button>
+        <button type="button" class="btn-action btn-secondary" style="flex:1;" onclick="openGroupModal()">+ 新增 Group</button>
       </div>
       <div id="sidebar-accounts" style="display:flex; flex-direction:column; gap:12px;"></div>
     </div>
@@ -170,7 +170,7 @@
           <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為未還 / Pending（置頂釘選）</label>
         </div>
 
-        <!-- 轉出列（單純帳戶或轉帳/換匯轉出列一行並排） -->
+        <!-- 轉出列 -->
         <div id="f-group-from-container">
           <div class="form-group" id="f-group-single-acc">
             <label id="label-from-acc">帳戶</label>
@@ -181,7 +181,7 @@
           </div>
         </div>
 
-        <!-- 轉入列（轉帳/換匯轉入列一行並排） -->
+        <!-- 轉入列 -->
         <div id="f-group-target-container" style="display: none;">
           <div class="form-group">
             <label>轉入戶口</label>
@@ -346,10 +346,11 @@
     <div class="modal-card">
       <div class="modal-header">
         <span id="group-modal-title">帳戶分組設定</span>
-        <button onclick="closeModal('group-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
+        <button type="button" onclick="closeModal('group-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="group-id">
+        <input type="hidden" id="group-theme" value="pink">
         <div class="form-group">
           <label>分組名稱</label>
           <input type="text" id="group-name" placeholder="例如：Everyday Banking">
@@ -364,9 +365,9 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-action btn-secondary" id="btn-delete-group" onclick="deleteCurrentGroup()" style="display:none; color:#D95D5D;">刪除</button>
-        <button class="btn-action btn-secondary" onclick="closeModal('group-modal')">取消</button>
-        <button class="btn-action" onclick="saveGroup()">儲存</button>
+        <button type="button" class="btn-action btn-secondary" id="btn-delete-group" onclick="deleteCurrentGroup()" style="display:none; color:#D95D5D;">刪除</button>
+        <button type="button" class="btn-action btn-secondary" onclick="closeModal('group-modal')">取消</button>
+        <button type="button" class="btn-action" onclick="saveGroup()">儲存</button>
       </div>
     </div>
   </div>
