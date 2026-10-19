@@ -101,7 +101,6 @@ function getAccountTypeIcon(type) {
   }
 }
 
-// 輔助函式：取得馬卡龍背景 class
 function getAccountTypeBadgeClass(type) {
   const t = (type || '').toLowerCase();
   switch (t) {
@@ -222,7 +221,8 @@ window.pushToGoogleSheet = async function() {
   if (!SCRIPT_URL) return;
   setSyncStatus('syncing', '正在儲存...');
   try {
-    const payload = { accounts, groups, categories, transactions };
+    const debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+    const payload = { accounts, groups, categories, transactions, debtRepayments };
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -250,6 +250,9 @@ window.pullFromGoogleSheet = async function() {
     if (data.groups && data.groups.length > 0) groups = data.groups;
     if (data.categories && data.categories.length > 0) categories = data.categories;
     if (data.transactions) transactions = data.transactions;
+    if (data.debtRepayments) {
+      localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
+    }
 
     if (accounts.length > 0 && !accounts.some(a => a.id === currentAccountId)) {
       currentAccountId = accounts[0].id;
@@ -526,6 +529,7 @@ function processMoneyWizCSVNative(grid) {
   }
 }
 
+/* 1. 修復 Apple Wallet 截圖 OCR 標題提取演算法（以金額行定位商戶，剔除狀態列） */
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -538,13 +542,28 @@ window.handleOCRImageSelected = async function(event) {
     await worker.terminate();
 
     const fullText = ret.data.text;
-    const amtMatch = fullText.match(/\$\s*(\d+[\.,]\d{2})/);
-    const amount = amtMatch ? amtMatch[1].replace(',', '.') : '';
+    const lines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-    const textLines = fullText.split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
-    const guessedTitle = textLines.length > 0 ? textLines[0] : 'Wallet 交易';
+    let amount = '';
+    let amtLineIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/(?:CA)?\$\s*(\d+[\.,]\d{2})/i);
+      if (match) {
+        amount = match[1].replace(',', '.');
+        amtLineIdx = i;
+        break;
+      }
+    }
+
+    let guessedTitle = 'Wallet 交易';
+    if (amtLineIdx !== -1 && amtLineIdx + 1 < lines.length) {
+      let rawMerchant = lines[amtLineIdx + 1];
+      guessedTitle = rawMerchant.split(',')[0].trim();
+    } else {
+      const textLines = lines.filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
+      if (textLines.length > 0) guessedTitle = textLines[0].split(',')[0].trim();
+    }
 
     let guessedDate = new Date().toISOString().split('T')[0];
     const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
@@ -842,6 +861,7 @@ window.renderApp = function() {
   });
 
   renderDetailView();
+  if (window.renderDebtTrackerView) window.renderDebtTrackerView();
 };
 
 window.toggleGroupCollapse = function(grpId) {
@@ -858,6 +878,7 @@ window.selectAccount = function(accId) {
 
 window.goBackToList = function() {
   document.body.classList.remove('mobile-view-detail');
+  switchMainTab('accounts');
 };
 
 window.switchInvestSubTab = function(tab) {
@@ -874,12 +895,38 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
+/* 3. 主頁 Tab 切換函式掛載（三 Tab：戶口 / 借貸 / 設定） */
+window.switchMainTab = function(tab) {
+  document.querySelectorAll('.ios-tab-bar .tab-item').forEach(el => el.classList.remove('active'));
+  const appContainer = document.querySelector('.app-container');
+  const debtView = document.getElementById('view-debt-tracker');
+
+  if (tab === 'accounts') {
+    const navAcc = document.getElementById('tab-nav-accounts');
+    if (navAcc) navAcc.classList.add('active');
+    if (debtView) debtView.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'flex';
+  } else if (tab === 'debts') {
+    const navDebts = document.getElementById('tab-nav-debts');
+    if (navDebts) navDebts.classList.add('active');
+    if (appContainer) appContainer.style.display = 'none';
+    if (debtView) {
+      debtView.style.display = 'flex';
+      if (window.renderDebtTrackerView) window.renderDebtTrackerView();
+    }
+  }
+};
+
 function renderDetailView() {
   const currentAcc = accounts.find(a => a.id === currentAccountId);
   const nameEl = document.getElementById('current-account-name');
   const balEl = document.getElementById('current-account-balance');
   const container = document.getElementById('content-container');
   const investTabs = document.getElementById('invest-subtabs');
+
+  if (window.checkStatementButtonVisibility) {
+    window.checkStatementButtonVisibility(currentAcc);
+  }
 
   if (!container) return;
 
@@ -1233,10 +1280,6 @@ window.switchTxTab = function(type) {
     if (labelT) labelT.innerText = '標題 / 商戶';
   }
 
-  if (type === 'expense' || type === 'income') {
-    populateCategoryDropdown(type);
-  }
-
   if (isTransferOrExchange) {
     populateTransferAccountSelects();
     updateTransferOrExchangeUI();
@@ -1246,6 +1289,62 @@ window.switchTxTab = function(type) {
     if (fExchange) fExchange.style.display = 'none';
     if (fCommission) fCommission.style.display = 'none';
   }
+};
+
+/* 2. 整合分類抽屜選取器（Searchable Category Picker） */
+window.openCatPicker = function() {
+  const searchInput = document.getElementById('cat-picker-search');
+  if (searchInput) searchInput.value = '';
+  renderPickerCategories(currentTxType, '');
+  openModal('cat-picker-drawer');
+};
+
+window.renderPickerCategories = function(flowType, keyword = '') {
+  const container = document.getElementById('cat-picker-list');
+  if (!container) return;
+  container.innerHTML = '';
+  const kw = keyword.toLowerCase();
+
+  const currentFlow = (flowType === 'income') ? 'income' : 'expense';
+  const parents = categories.filter(c => c.flowType === currentFlow && !c.parentId);
+
+  parents.forEach(p => {
+    const children = categories.filter(c => c.parentId === p.id);
+    const matchedChildren = children.filter(ch => ch.name.toLowerCase().includes(kw));
+    const parentMatches = p.name.toLowerCase().includes(kw);
+
+    if (kw && !parentMatches && matchedChildren.length === 0) return;
+
+    const showChildren = kw ? (parentMatches ? children : matchedChildren) : children;
+
+    if (showChildren.length === 0) {
+      const row = document.createElement('div');
+      row.className = 'picker-cat-row';
+      row.innerHTML = `<span style="font-size:18px;">${p.icon}</span><span style="font-size:13.5px; font-weight:600;">${p.name}</span>`;
+      row.onclick = () => {
+        document.getElementById('tx-category').value = p.id;
+        document.getElementById('tx-cat-display-name').innerText = `${p.icon} ${p.name}`;
+        closeModal('cat-picker-drawer');
+      };
+      container.appendChild(row);
+    } else {
+      showChildren.forEach(ch => {
+        const row = document.createElement('div');
+        row.className = 'picker-cat-row';
+        row.innerHTML = `<span style="font-size:18px;">${ch.icon}</span><span style="font-size:13.5px; font-weight:600;">${p.name} > ${ch.name}</span>`;
+        row.onclick = () => {
+          document.getElementById('tx-category').value = ch.id;
+          document.getElementById('tx-cat-display-name').innerText = `${ch.icon} ${ch.name}`;
+          closeModal('cat-picker-drawer');
+        };
+        container.appendChild(row);
+      });
+    }
+  });
+};
+
+window.filterPickerCategories = function(kw) {
+  renderPickerCategories(currentTxType, kw);
 };
 
 function populateGroupedAccountSelect(selectEl, selectedId = null, excludeAccId = null) {
@@ -1409,32 +1508,6 @@ async function syncExchangeValuesOnAccountChange() {
   }
 }
 
-function populateCategoryDropdown(flowType, selectedId = null) {
-  const select = document.getElementById('tx-category');
-  if (!select) return;
-  select.innerHTML = '';
-  const parents = categories.filter(c => c.flowType === flowType && !c.parentId);
-  parents.forEach(p => {
-    const children = categories.filter(c => c.parentId === p.id);
-    if (children.length > 0) {
-      const optGroup = document.createElement('optgroup');
-      optGroup.label = `${p.icon} ${p.name}`;
-      children.forEach(ch => {
-        const opt = document.createElement('option');
-        opt.value = ch.id; opt.innerText = `${ch.icon} ${ch.name}`;
-        if (selectedId === ch.id) opt.selected = true;
-        optGroup.appendChild(opt);
-      });
-      select.appendChild(optGroup);
-    } else {
-      const opt = document.createElement('option');
-      opt.value = p.id; opt.innerText = `${p.icon} ${p.name}`;
-      if (selectedId === p.id) opt.selected = true;
-      select.appendChild(opt);
-    }
-  });
-}
-
 window.openTxModal = function() {
   const defaultAcc = accounts.find(a => a.id === currentAccountId) || accounts[0];
   const isInvest = defaultAcc && defaultAcc.type === 'investment';
@@ -1449,6 +1522,9 @@ window.openTxModal = function() {
   document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('btn-delete-tx').style.display = 'none';
   document.getElementById('tx-modal-title').innerText = '記一筆交易';
+
+  document.getElementById('tx-category').value = '';
+  document.getElementById('tx-cat-display-name').innerText = '🏷️ 點擊選擇分類';
 
   setupModalTypeTabs(isInvest);
   populateTransferAccountSelects(defaultAcc ? defaultAcc.id : null);
@@ -1498,7 +1574,9 @@ window.openEditTxModal = function(txId) {
   } else if (tx.type === 'expense' || tx.type === 'income') {
     document.getElementById('tx-title').value = tx.title;
     document.getElementById('tx-amount').value = tx.amount;
-    populateCategoryDropdown(tx.type, tx.categoryId);
+    document.getElementById('tx-category').value = tx.categoryId || '';
+    const cat = categories.find(c => c.id === tx.categoryId);
+    document.getElementById('tx-cat-display-name').innerText = cat ? `${cat.icon} ${cat.name}` : '🏷️ 點擊選擇分類';
   } else if (tx.type === 'transfer') {
     document.getElementById('tx-commission').value = tx.commission || '';
     const activeFromCur = document.getElementById('tx-from-currency').value;

@@ -468,6 +468,70 @@ select:focus,
 
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
 
+/* --- 內部借貸卡片 (Debt Contract Card) --- */
+.debt-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.debt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.debt-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.debt-card-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.debt-stats-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 12.5px;
+  border-top: 1px dashed var(--border-color);
+  border-bottom: 1px dashed var(--border-color);
+  margin-bottom: 10px;
+}
+.debt-stat-val.remain {
+  color: #D95D5D;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* 分類搜尋抽屜行項與觸發框 */
+.category-picker-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #FAF9F6;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.picker-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.picker-cat-row:hover, .picker-cat-row:active {
+  background: #FAF8F5;
+}
+
 /* 手機端專屬適配 */
 @media (max-width: 768px) {
   .sidebar { 
