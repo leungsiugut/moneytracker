@@ -76,6 +76,8 @@ let currentAccountId = accounts.length > 0 ? accounts[0].id : null;
 let currentTxType = 'expense';
 let currentInvestSubTab = 'holdings';
 let currentCatSettingsTab = 'expense';
+let currentMainTab = 'accounts';
+let previousActiveTab = 'accounts';
 let searchKeyword = '';
 let chartInstance = null;
 
@@ -211,12 +213,20 @@ function fmtCur(amt, cur = 'CAD') {
 }
 
 window.setSyncStatus = function(state, msg) {
-  const el = document.getElementById('sync-status-indicator');
-  const text = document.getElementById('sync-status-text');
-  if (el) el.className = `sync-status ${state}`;
+  const btn = document.getElementById('btn-manual-sync');
+  const text = document.getElementById('sync-text');
+  const icon = document.getElementById('sync-icon');
+  if (btn) btn.className = `sync-status ${state}`;
   if (text) text.innerText = msg;
+  if (icon) {
+    if (state === 'syncing') icon.innerText = '⏳';
+    else if (state === 'synced') icon.innerText = '☁️';
+    else if (state === 'error') icon.innerText = '⚠️';
+    else icon.innerText = '☁️';
+  }
 };
 
+// 雲端同步：納入 debtRepayments 雙向讀寫
 window.pushToGoogleSheet = async function() {
   if (!SCRIPT_URL) return;
   setSyncStatus('syncing', '正在儲存...');
@@ -250,7 +260,7 @@ window.pullFromGoogleSheet = async function() {
     if (data.groups && data.groups.length > 0) groups = data.groups;
     if (data.categories && data.categories.length > 0) categories = data.categories;
     if (data.transactions) transactions = data.transactions;
-    if (data.debtRepayments) {
+    if (data.debtRepayments && Array.isArray(data.debtRepayments)) {
       localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
     }
 
@@ -266,8 +276,13 @@ window.pullFromGoogleSheet = async function() {
   }
 };
 
-window.manualSyncFromCloud = function() {
-  if (!SCRIPT_URL) { switchMainTab('settings'); return; }
+// 手動同步觸發按鈕
+window.manualSyncTrigger = function() {
+  if (!SCRIPT_URL) {
+    switchMainTab('settings');
+    return;
+  }
+  setSyncStatus('syncing', '同步中...');
   pullFromGoogleSheet();
 };
 
@@ -529,7 +544,7 @@ function processMoneyWizCSVNative(grid) {
   }
 }
 
-// Apple Wallet 截圖 OCR 辨識
+// 截圖 OCR 辨識：完成後自動打開獨立交易全螢幕 Form
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -578,7 +593,7 @@ window.handleOCRImageSelected = async function(event) {
       targetAccId = accounts[0].id;
     }
 
-    openTxModal();
+    openTxPage(null);
     switchTxTab('expense');
 
     if (amount) document.getElementById('tx-amount').value = amount;
@@ -795,6 +810,7 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
+// 渲染主畫面：恢復 Group 自選 Icon 與各帳戶馬卡龍 Badge
 window.renderApp = function() {
   let totalNetWorthInBase = 0;
   accounts.forEach(acc => {
@@ -821,6 +837,7 @@ window.renderApp = function() {
     }, 0);
 
     const isCollapsed = !!collapsedGroups[grp.id];
+    const groupIcon = grp.icon || '📁';
 
     const card = document.createElement('div');
     card.className = `group-card group-${grp.theme || 'mint'}`;
@@ -828,7 +845,7 @@ window.renderApp = function() {
       <div class="group-header">
         <div class="group-title-area" onclick="toggleGroupCollapse('${grp.id}')">
           <span class="group-collapse-btn ${isCollapsed ? 'collapsed' : ''}">▼</span>
-          <span>${grp.name}</span>
+          <span>${groupIcon} ${grp.name}</span>
           <span style="font-size: 11px; opacity: 0.6;" onclick="event.stopPropagation(); openEditGroupModal('${grp.id}')" title="設定分組">✎</span>
         </div>
         <span>${fmtCur(groupBalanceInGrpCur, grpCur)}</span>
@@ -850,6 +867,7 @@ window.renderApp = function() {
           <div class="account-icon-badge ${badgeClass}">${icon}</div>
           <div class="account-info">
             <span class="account-name">${acc.name}</span>
+            <span style="font-size: 11px; color: var(--text-muted);">${acc.currency}</span>
           </div>
         </div>
         <span class="account-balance">${fmtCur(accVal, acc.currency)}</span>
@@ -898,18 +916,20 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-// 三大平級主 View 切換
+// 切換三大主 View
 window.switchMainTab = function(tab) {
+  currentMainTab = tab;
   document.querySelectorAll('.ios-tab-bar .tab-item').forEach(el => el.classList.remove('active'));
   
   const viewAccounts = document.getElementById('view-accounts');
   const viewDebts = document.getElementById('view-debt-tracker');
   const viewSettings = document.getElementById('view-settings');
-  const globalHeader = document.getElementById('app-global-header');
+  const viewTxForm = document.getElementById('view-tx-form');
 
   if (viewAccounts) viewAccounts.style.display = 'none';
   if (viewDebts) viewDebts.style.display = 'none';
   if (viewSettings) viewSettings.style.display = 'none';
+  if (viewTxForm) viewTxForm.style.display = 'none';
 
   if (tab === 'accounts') {
     const navAcc = document.getElementById('tab-nav-accounts');
@@ -937,6 +957,154 @@ window.switchMainTab = function(tab) {
     renderCategoryTree();
   }
 };
+
+// 交易全螢幕 Full Page 切換控制器
+window.openTxPage = function(txId = null) {
+  previousActiveTab = currentMainTab || 'accounts';
+  
+  document.getElementById('view-accounts').style.display = 'none';
+  if (document.getElementById('view-debt-tracker')) document.getElementById('view-debt-tracker').style.display = 'none';
+  if (document.getElementById('view-settings')) document.getElementById('view-settings').style.display = 'none';
+  
+  const tabBar = document.querySelector('.ios-tab-bar');
+  if (tabBar) tabBar.style.display = 'none';
+
+  document.body.classList.add('hide-header');
+
+  const txPage = document.getElementById('view-tx-form');
+  txPage.style.display = 'flex';
+
+  if (txId) {
+    document.getElementById('tx-page-title').innerText = '編輯交易';
+    document.getElementById('btn-delete-tx-page').style.display = 'block';
+    setupEditTxForm(txId);
+  } else {
+    document.getElementById('tx-page-title').innerText = '記一筆交易';
+    document.getElementById('btn-delete-tx-page').style.display = 'none';
+    resetTxForm();
+  }
+};
+
+window.closeTxPage = function() {
+  document.getElementById('view-tx-form').style.display = 'none';
+  
+  const tabBar = document.querySelector('.ios-tab-bar');
+  if (tabBar && window.innerWidth <= 768) {
+    tabBar.style.display = 'flex';
+  }
+  
+  switchMainTab(previousActiveTab);
+};
+
+window.saveTransactionFromPage = function() {
+  const success = saveTransaction();
+  if (success !== false) {
+    closeTxPage();
+  }
+};
+
+window.deleteCurrentTxFromPage = function() {
+  if (confirm('確定刪除此交易？')) {
+    deleteCurrentTx();
+    closeTxPage();
+  }
+};
+
+function resetTxForm() {
+  const defaultAcc = accounts.find(a => a.id === currentAccountId) || accounts[0];
+  const isInvest = defaultAcc && defaultAcc.type === 'investment';
+
+  ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
+   'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
+   'tx-stock-price', 'tx-stock-total', 'tx-stock-commission'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('tx-is-pending').checked = false;
+  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+
+  document.getElementById('tx-category').value = '';
+  document.getElementById('tx-cat-display-name').innerText = '🏷️ 點擊選擇分類';
+
+  setupModalTypeTabs(isInvest);
+  populateTransferAccountSelects(defaultAcc ? defaultAcc.id : null);
+
+  const targetAcc = accounts.find(a => a.id !== (defaultAcc ? defaultAcc.id : '')) || defaultAcc;
+  if (defaultAcc) {
+    populateCurrencyOptions(document.getElementById('tx-from-currency'), defaultAcc.currency);
+  }
+  if (targetAcc) {
+    populateCurrencyOptions(document.getElementById('tx-to-currency'), targetAcc.currency);
+  }
+
+  switchTxTab(isInvest ? 'buy' : 'expense');
+}
+
+function setupEditTxForm(txId) {
+  const tx = transactions.find(t => t.id === txId);
+  if (!tx) return;
+  const acc = accounts.find(a => a.id === tx.accountId) || accounts[0];
+  const isInvest = acc && acc.type === 'investment';
+
+  ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
+   'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
+   'tx-stock-price', 'tx-stock-total', 'tx-stock-commission'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  document.getElementById('tx-id').value = tx.id;
+  document.getElementById('tx-is-pending').checked = (tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE');
+  
+  setupModalTypeTabs(isInvest);
+  populateTransferAccountSelects(tx.accountId, tx.toAccountId);
+
+  const fromAcc = accounts.find(a => a.id === tx.accountId);
+  const toAcc = accounts.find(a => a.id === tx.toAccountId);
+  populateCurrencyOptions(document.getElementById('tx-from-currency'), tx.currency || fromAcc?.currency || 'CAD');
+  populateCurrencyOptions(document.getElementById('tx-to-currency'), tx.toCurrency || toAcc?.currency || 'CAD');
+
+  switchTxTab(tx.type);
+
+  if (tx.type === 'adjust') {
+    document.getElementById('tx-title').value = tx.title || '餘額調整';
+    document.getElementById('tx-amount').value = tx.amount;
+  } else if (tx.type === 'expense' || tx.type === 'income') {
+    document.getElementById('tx-title').value = tx.title;
+    document.getElementById('tx-amount').value = tx.amount;
+    document.getElementById('tx-category').value = tx.categoryId || '';
+    const cat = categories.find(c => c.id === tx.categoryId);
+    document.getElementById('tx-cat-display-name').innerText = cat ? `${cat.icon} ${cat.name}` : '🏷️ 點擊選擇分類';
+  } else if (tx.type === 'transfer') {
+    document.getElementById('tx-commission').value = tx.commission || '';
+    const activeFromCur = document.getElementById('tx-from-currency').value;
+    const activeToCur = document.getElementById('tx-to-currency').value;
+
+    if (activeFromCur !== activeToCur) {
+      document.getElementById('tx-from-amount').value = tx.amount;
+      document.getElementById('tx-to-amount').value = tx.toAmount || tx.amount;
+      document.getElementById('tx-exchange-rate').value = tx.rate || ((tx.toAmount || tx.amount) / tx.amount).toFixed(4);
+    } else {
+      document.getElementById('tx-amount').value = tx.amount;
+    }
+  } else if (tx.type === 'exchange') {
+    document.getElementById('tx-from-amount').value = tx.amount;
+    document.getElementById('tx-to-amount').value = tx.toAmount;
+    document.getElementById('tx-exchange-rate').value = tx.rate;
+    document.getElementById('tx-commission').value = tx.commission || '';
+  } else if (tx.type === 'buy' || tx.type === 'sell') {
+    document.getElementById('tx-stock-symbol').value = tx.symbol;
+    document.getElementById('tx-stock-shares').value = tx.shares;
+    document.getElementById('tx-stock-price').value = tx.price;
+    document.getElementById('tx-stock-total').value = tx.amount;
+    document.getElementById('tx-stock-commission').value = tx.commission || '';
+  } else if (tx.type === 'dividend') {
+    document.getElementById('tx-stock-symbol').value = tx.symbol;
+    document.getElementById('tx-stock-total').value = tx.amount;
+  }
+
+  document.getElementById('tx-date').value = normalizeDateString(tx.date);
+}
 
 function renderDetailView() {
   const currentAcc = accounts.find(a => a.id === currentAccountId);
@@ -1038,7 +1206,6 @@ function renderTransactions(currentAcc) {
 
   accTxs.sort((a,b) => new Date(b.date) - new Date(a.date));
 
-  // 統一 Pending 判定（相容 boolean 與字串 "TRUE"）
   const isPendingTx = (t) => t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
 
   const pendingTxs = accTxs.filter(isPendingTx);
@@ -1172,7 +1339,7 @@ function createTxElement(tx, currentAcc) {
         title = `兌換至 ${toAcc ? toAcc.name : ''}`;
         amtClass = 'transfer';
         amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}</span>`;
+        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}</span>`;
       } else {
         title = `由 ${fromAcc ? fromAcc.name : ''} 存入`;
         amtClass = 'income';
@@ -1202,7 +1369,7 @@ function createTxElement(tx, currentAcc) {
   }
 
   item.innerHTML = `
-    <div class="tx-left" onclick="openEditTxModal('${tx.id}')">
+    <div class="tx-left" onclick="openTxPage('${tx.id}')">
       <div class="tx-tag">${icon}</div>
       <div class="tx-content">
         <div class="tx-title">${title}</div>
@@ -1317,7 +1484,6 @@ window.switchTxTab = function(type) {
   }
 };
 
-// 恢復層級：父類別 Header + 縮排子分類清單
 window.openCatPicker = function() {
   const searchInput = document.getElementById('cat-picker-search');
   if (searchInput) searchInput.value = '';
@@ -1341,12 +1507,10 @@ window.renderPickerCategories = function(flowType, keyword = '') {
 
     if (kw && !parentMatches && matchedChildren.length === 0) return;
 
-    // 渲染父分類 Header
     const headerEl = document.createElement('div');
     headerEl.className = 'picker-cat-header';
     headerEl.innerHTML = `<span>${p.icon}</span><span>${p.name}</span>`;
     
-    // 如果父分類本身沒有子分類，則點擊 Header 即可選取
     if (children.length === 0) {
       headerEl.style.cursor = 'pointer';
       headerEl.onclick = () => {
@@ -1360,7 +1524,6 @@ window.renderPickerCategories = function(flowType, keyword = '') {
 
     container.appendChild(headerEl);
 
-    // 渲染專屬子分類（只顯示子分類名稱）
     const showChildren = kw ? (parentMatches ? children : matchedChildren) : children;
     showChildren.forEach(ch => {
       const row = document.createElement('div');
@@ -1541,108 +1704,6 @@ async function syncExchangeValuesOnAccountChange() {
   }
 }
 
-window.openTxModal = function() {
-  const defaultAcc = accounts.find(a => a.id === currentAccountId) || accounts[0];
-  const isInvest = defaultAcc && defaultAcc.type === 'investment';
-
-  ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
-   'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
-   'tx-stock-price', 'tx-stock-total', 'tx-stock-commission'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('tx-is-pending').checked = false;
-  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('btn-delete-tx').style.display = 'none';
-  document.getElementById('tx-modal-title').innerText = '記一筆交易';
-
-  document.getElementById('tx-category').value = '';
-  document.getElementById('tx-cat-display-name').innerText = '🏷️ 點擊選擇分類';
-
-  setupModalTypeTabs(isInvest);
-  populateTransferAccountSelects(defaultAcc ? defaultAcc.id : null);
-
-  const targetAcc = accounts.find(a => a.id !== (defaultAcc ? defaultAcc.id : '')) || defaultAcc;
-  if (defaultAcc) {
-    populateCurrencyOptions(document.getElementById('tx-from-currency'), defaultAcc.currency);
-  }
-  if (targetAcc) {
-    populateCurrencyOptions(document.getElementById('tx-to-currency'), targetAcc.currency);
-  }
-
-  switchTxTab(isInvest ? 'buy' : 'expense');
-  openModal('tx-modal');
-};
-
-window.openEditTxModal = function(txId) {
-  const tx = transactions.find(t => t.id === txId);
-  if (!tx) return;
-  const acc = accounts.find(a => a.id === tx.accountId) || accounts[0];
-  const isInvest = acc && acc.type === 'investment';
-
-  ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
-   'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
-   'tx-stock-price', 'tx-stock-total', 'tx-stock-commission'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
-  document.getElementById('tx-id').value = tx.id;
-  document.getElementById('tx-modal-title').innerText = '編輯交易';
-  document.getElementById('tx-is-pending').checked = (tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE');
-  
-  setupModalTypeTabs(isInvest);
-  
-  populateTransferAccountSelects(tx.accountId, tx.toAccountId);
-  const fromAcc = accounts.find(a => a.id === tx.accountId);
-  const toAcc = accounts.find(a => a.id === tx.toAccountId);
-  populateCurrencyOptions(document.getElementById('tx-from-currency'), tx.currency || fromAcc?.currency || 'CAD');
-  populateCurrencyOptions(document.getElementById('tx-to-currency'), tx.toCurrency || toAcc?.currency || 'CAD');
-
-  switchTxTab(tx.type);
-
-  if (tx.type === 'adjust') {
-    document.getElementById('tx-title').value = tx.title || '餘額調整';
-    document.getElementById('tx-amount').value = tx.amount;
-  } else if (tx.type === 'expense' || tx.type === 'income') {
-    document.getElementById('tx-title').value = tx.title;
-    document.getElementById('tx-amount').value = tx.amount;
-    document.getElementById('tx-category').value = tx.categoryId || '';
-    const cat = categories.find(c => c.id === tx.categoryId);
-    document.getElementById('tx-cat-display-name').innerText = cat ? `${cat.icon} ${cat.name}` : '🏷️ 點擊選擇分類';
-  } else if (tx.type === 'transfer') {
-    document.getElementById('tx-commission').value = tx.commission || '';
-    const activeFromCur = document.getElementById('tx-from-currency').value;
-    const activeToCur = document.getElementById('tx-to-currency').value;
-
-    if (activeFromCur !== activeToCur) {
-      document.getElementById('tx-from-amount').value = tx.amount;
-      document.getElementById('tx-to-amount').value = tx.toAmount || tx.amount;
-      document.getElementById('tx-exchange-rate').value = tx.rate || ((tx.toAmount || tx.amount) / tx.amount).toFixed(4);
-    } else {
-      document.getElementById('tx-amount').value = tx.amount;
-    }
-  } else if (tx.type === 'exchange') {
-    document.getElementById('tx-from-amount').value = tx.amount;
-    document.getElementById('tx-to-amount').value = tx.toAmount;
-    document.getElementById('tx-exchange-rate').value = tx.rate;
-    document.getElementById('tx-commission').value = tx.commission || '';
-  } else if (tx.type === 'buy' || tx.type === 'sell') {
-    document.getElementById('tx-stock-symbol').value = tx.symbol;
-    document.getElementById('tx-stock-shares').value = tx.shares;
-    document.getElementById('tx-stock-price').value = tx.price;
-    document.getElementById('tx-stock-total').value = tx.amount;
-    document.getElementById('tx-stock-commission').value = tx.commission || '';
-  } else if (tx.type === 'dividend') {
-    document.getElementById('tx-stock-symbol').value = tx.symbol;
-    document.getElementById('tx-stock-total').value = tx.amount;
-  }
-
-  document.getElementById('tx-date').value = normalizeDateString(tx.date);
-  document.getElementById('btn-delete-tx').style.display = 'inline-block';
-  openModal('tx-modal');
-};
-
 window.saveTransaction = function() {
   const id = document.getElementById('tx-id').value;
   const date = normalizeDateString(document.getElementById('tx-date').value);
@@ -1662,20 +1723,20 @@ window.saveTransaction = function() {
 
   if (currentTxType === 'adjust') {
     const adjAmt = parseFloat(document.getElementById('tx-amount').value);
-    if (isNaN(adjAmt)) { alert('請填寫有效調整金額！'); return; }
+    if (isNaN(adjAmt)) { alert('請填寫有效調整金額！'); return false; }
     const title = document.getElementById('tx-title').value.trim() || '餘額調整';
     txData = { ...txData, title, amount: adjAmt };
   } else if (currentTxType === 'expense' || currentTxType === 'income') {
     const title = document.getElementById('tx-title').value.trim() || '未命名項目';
     const amount = parseFloat(document.getElementById('tx-amount').value);
     const categoryId = document.getElementById('tx-category').value;
-    if (isNaN(amount) || amount <= 0) { alert('請填寫有效金額！'); return; }
+    if (isNaN(amount) || amount <= 0) { alert('請填寫有效金額！'); return false; }
     txData = { ...txData, title, amount, categoryId };
   } else if (currentTxType === 'transfer') {
     const toAccountId = document.getElementById('tx-target-acc').value;
     if (!activeAccountId || !toAccountId || activeAccountId === toAccountId) {
       alert('轉出與轉入帳戶不能相同！');
-      return;
+      return false;
     }
 
     const fromAcc = accounts.find(a => a.id === activeAccountId);
@@ -1702,7 +1763,7 @@ window.saveTransaction = function() {
 
     if (isNaN(amount) || amount <= 0 || isNaN(toAmount) || toAmount <= 0) {
       alert('請填寫有效轉帳金額！');
-      return;
+      return false;
     }
 
     txData = {
@@ -1728,11 +1789,11 @@ window.saveTransaction = function() {
 
     if (isNaN(fromAmt) || isNaN(toAmt) || fromAmt <= 0 || toAmt <= 0) {
       alert('請填寫完整且有效的兌換金額！');
-      return;
+      return false;
     }
     if (fromCurrency === toCurrency && activeAccountId === toAccountId) {
       alert('同帳戶兌換之轉出與轉入幣種不能相同！');
-      return;
+      return false;
     }
 
     const toAcc = accounts.find(a => a.id === toAccountId);
@@ -1758,12 +1819,12 @@ window.saveTransaction = function() {
     const price = parseFloat(document.getElementById('tx-stock-price').value);
     const amount = parseFloat(document.getElementById('tx-stock-total').value);
     const commission = parseFloat(document.getElementById('tx-stock-commission').value) || 0;
-    if (!symbol || isNaN(shares) || isNaN(price) || isNaN(amount)) { alert('請填寫完整股票明細！'); return; }
+    if (!symbol || isNaN(shares) || isNaN(price) || isNaN(amount)) { alert('請填寫完整股票明細！'); return false; }
     txData = { ...txData, symbol, shares, price, amount, commission };
   } else if (currentTxType === 'dividend') {
     const symbol = document.getElementById('tx-stock-symbol').value.trim().toUpperCase();
     const amount = parseFloat(document.getElementById('tx-stock-total').value);
-    if (!symbol || isNaN(amount) || amount <= 0) { alert('請填寫股票代號及派息金額！'); return; }
+    if (!symbol || isNaN(amount) || amount <= 0) { alert('請填寫股票代號及派息金額！'); return false; }
     txData = { ...txData, symbol, amount };
   }
 
@@ -1774,13 +1835,13 @@ window.saveTransaction = function() {
     transactions.push(txData);
   }
 
-  closeModal('tx-modal');
   saveData();
+  return true;
 };
 
 window.deleteCurrentTx = function() {
   const id = document.getElementById('tx-id').value;
-  if (!confirm('確定刪除呢筆交易？')) return;
+  if (!id) return;
 
   const txToDelete = transactions.find(t => t.id === id);
   if (txToDelete && txToDelete.linkedTxId) {
@@ -1789,7 +1850,6 @@ window.deleteCurrentTx = function() {
     transactions = transactions.filter(t => t.id !== id);
   }
 
-  closeModal('tx-modal');
   saveData();
 };
 
@@ -2215,52 +2275,6 @@ window.deleteCurrentGroup = function() {
   closeModal('group-modal');
   saveData();
 };
-
-// PWA 下拉刷新
-let touchStartY = 0;
-let isPulling = false;
-const pullIndicator = document.getElementById('pwa-pull-indicator');
-
-window.addEventListener('touchstart', (e) => {
-  const scrollEl = document.querySelector('.main-detail') || document.querySelector('.sidebar') || window;
-  const currentScrollTop = scrollEl.scrollTop !== undefined ? scrollEl.scrollTop : window.scrollY;
-
-  if (currentScrollTop <= 0 && e.touches.length === 1) {
-    touchStartY = e.touches[0].clientY;
-    isPulling = true;
-  } else {
-    isPulling = false;
-  }
-}, { passive: true });
-
-window.addEventListener('touchmove', (e) => {
-  if (!isPulling || !pullIndicator) return;
-  const currentY = e.touches[0].clientY;
-  const pullDistance = currentY - touchStartY;
-
-  if (pullDistance > 40) {
-    pullIndicator.style.display = 'flex';
-    pullIndicator.style.transform = `translateY(${Math.min(pullDistance - 40, 50)}px)`;
-  } else {
-    pullIndicator.style.display = 'none';
-  }
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-  if (!isPulling || !pullIndicator) return;
-  const touchEndY = e.changedTouches[0].clientY;
-  const pullDistance = touchEndY - touchStartY;
-  isPulling = false;
-
-  if (pullDistance > 70) {
-    pullIndicator.innerHTML = '<span>⏳ 正在重新載入最新頁面...</span>';
-    setTimeout(() => {
-      window.location.href = window.location.pathname + '?v=' + Date.now();
-    }, 200);
-  } else {
-    pullIndicator.style.display = 'none';
-  }
-}, { passive: true });
 
 // 初始化
 try {

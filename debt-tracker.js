@@ -3,12 +3,13 @@ let debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || 
 
 // 計算特定交易的累計已還金額
 window.getTxRepaidAmount = function(txId) {
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
   return debtRepayments
     .filter(r => r.txId === txId)
     .reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
 };
 
-// 判定交易是否屬於 Pending（相容布林值與字串 "TRUE"）
+// 判定交易是否屬於 Pending
 window.isPendingTx = function(t) {
   return t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
 };
@@ -64,10 +65,10 @@ window.renderDebtTrackerView = function() {
   }
 };
 
-// 打開快速還款 Modal
+// 打開快速還款 Modal：金額預設清空
 window.openQuickRepayModal = function(txId, remainAmt) {
   document.getElementById('repay-target-tx-id').value = txId;
-  document.getElementById('repay-amount').value = Number(remainAmt).toFixed(2);
+  document.getElementById('repay-amount').value = ''; // 👈 清空，不預先填寫金額
   document.getElementById('repay-note').value = '';
   document.getElementById('repay-date').value = new Date().toISOString().split('T')[0];
   openModal('quick-repay-modal');
@@ -93,10 +94,11 @@ window.saveQuickRepayment = function() {
     note
   };
 
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
   debtRepayments.push(newRepayment);
   localStorage.setItem('wiz_debt_repayments', JSON.stringify(debtRepayments));
 
-  // 檢查是否已還清
+  // 檢查是否已全數還清
   const tx = transactions.find(t => t.id === txId);
   if (tx) {
     const totalRepaid = getTxRepaidAmount(txId);
@@ -112,12 +114,13 @@ window.saveQuickRepayment = function() {
   renderDebtTrackerView();
 };
 
-// 打開還款歷史明細 Modal
+// 打開還款歷史明細 Modal（支援編輯與刪除）
 window.openRepayLogModal = function(txId) {
   const container = document.getElementById('repay-log-list');
   if (!container) return;
   container.innerHTML = '';
 
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
   const logs = debtRepayments.filter(r => r.txId === txId).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (logs.length === 0) {
@@ -131,11 +134,55 @@ window.openRepayLogModal = function(txId) {
           <div style="font-weight:600;">${log.note || '分期還款'}</div>
           <div style="font-size:11px; color:var(--text-muted);">${log.date}</div>
         </div>
-        <div style="font-weight:700; color:#2D6A4F;">+$${parseFloat(log.amount).toFixed(2)}</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-weight:700; color:#2D6A4F;">+$${parseFloat(log.amount).toFixed(2)}</span>
+          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="editRepayRecord('${log.id}')" title="編輯">✏️</button>
+          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="deleteRepayRecord('${log.id}', '${txId}')" title="刪除">🗑️</button>
+        </div>
       `;
       container.appendChild(row);
     });
   }
 
   openModal('repay-log-modal');
+};
+
+// 刪除還款單筆記錄
+window.deleteRepayRecord = function(repayId, txId) {
+  if (!confirm('確定刪除這筆還款記錄？')) return;
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+  debtRepayments = debtRepayments.filter(r => r.id !== repayId);
+  localStorage.setItem('wiz_debt_repayments', JSON.stringify(debtRepayments));
+
+  const tx = transactions.find(t => t.id === txId);
+  if (tx && getTxRepaidAmount(txId) < parseFloat(tx.amount)) {
+    tx.isPending = true;
+  }
+
+  saveData();
+  openRepayLogModal(txId);
+  renderDebtTrackerView();
+};
+
+// 編輯還款單筆記錄
+window.editRepayRecord = function(repayId) {
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+  const record = debtRepayments.find(r => r.id === repayId);
+  if (!record) return;
+
+  const newAmt = prompt('請輸入修改後的還款金額：', record.amount);
+  if (newAmt === null) return;
+  const parsedAmt = parseFloat(newAmt);
+  if (isNaN(parsedAmt) || parsedAmt <= 0) {
+    alert('請輸入有效金額！');
+    return;
+  }
+  const newNote = prompt('請輸入備註：', record.note || '');
+  record.amount = parsedAmt;
+  if (newNote !== null) record.note = newNote.trim();
+
+  localStorage.setItem('wiz_debt_repayments', JSON.stringify(debtRepayments));
+  saveData();
+  openRepayLogModal(record.txId);
+  renderDebtTrackerView();
 };

@@ -41,25 +41,6 @@ html, body {
   flex-direction: column;
 }
 
-/* PWA 下拉刷新指示器樣式 */
-#pwa-pull-indicator {
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  right: 0; 
-  height: 50px; 
-  display: none; 
-  align-items: center; 
-  justify-content: center; 
-  background: rgba(52, 58, 64, 0.9); 
-  color: #FFC107; 
-  font-size: 13px; 
-  font-weight: 700; 
-  z-index: 9999; 
-  transition: transform 0.2s ease;
-}
-
-/* 全域頂部 Header */
 header {
   flex-shrink: 0;
   box-sizing: border-box;
@@ -78,12 +59,12 @@ header {
   transition: all 0.2s ease;
 }
 
-/* 進入明細頁或非戶口主頁時隱藏頂部 Hero Net Worth Header */
 body.hide-header header {
   display: none !important;
 }
 
 .header-left { display: flex; align-items: center; gap: 14px; }
+.header-right { display: flex; align-items: center; gap: 8px; }
 
 .net-worth-box {
   display: flex;
@@ -108,25 +89,27 @@ body.hide-header header {
   white-space: nowrap;
 }
 
+/* 頂部右側手動同步微標籤按鈕 */
 .sync-status {
-  font-size: 10.5px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: #F3F1EC;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   cursor: pointer;
-  margin-top: 2px;
-  width: fit-content;
+  outline: none;
+  transition: background 0.15s ease;
 }
+.sync-status:hover { background: #EAE6DF; }
 .sync-status.synced { color: #2D6A4F; }
-.sync-status.syncing { color: #8A6D1F; }
-.sync-status.error { color: #D95D5D; }
+.sync-status.syncing { color: #8A6D1F; background: #FFF9E6; border-color: #FFE082; }
+.sync-status.error { color: #D95D5D; background: #FFEBEE; border-color: #FFCDD2; }
 
-/* 主視口容器 */
 .app-main-viewport {
   flex: 1;
   display: flex;
@@ -143,7 +126,6 @@ body.hide-header header {
   height: 100%;
 }
 
-/* 平級獨立主頁面 View (Debts / Settings) */
 .main-page-view {
   flex: 1;
   display: flex;
@@ -156,19 +138,18 @@ body.hide-header header {
 }
 
 .page-view-header {
-  padding: 16px 20px;
+  padding: 14px 20px;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: max(16px, env(safe-area-inset-top));
+  padding-top: max(14px, env(safe-area-inset-top));
   position: sticky;
   top: 0;
   z-index: 40;
 }
 
-/* 設定頁面內容佈局 */
 .settings-page-content {
   padding: 16px 20px;
   display: flex;
@@ -231,25 +212,26 @@ body.hide-header header {
 .account-name { font-size: 13.5px; font-weight: 600; }
 .account-balance { font-size: 13px; font-weight: 700; }
 
+/* 馬卡龍色系 Badge 樣式 */
 .account-icon-badge {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 18px;
   margin-right: 12px;
 }
 
-.badge-checking   { background-color: #E0F2F1; }
-.badge-savings    { background-color: #E3F2FD; }
-.badge-credit     { background-color: #FCE4EC; }
-.badge-investment { background-color: #F3E8FF; }
-.badge-cash       { background-color: #FFF8E1; }
-.badge-crypto     { background-color: #FFF3E0; }
-.badge-default    { background-color: #F5F5F7; }
+.badge-checking   { background-color: #E0F2F1; color: #2D6A4F; }
+.badge-savings    { background-color: #E3F2FD; color: #2B5C8F; }
+.badge-credit     { background-color: #FCE4EC; color: #9E3D60; }
+.badge-investment { background-color: #F3E8FF; color: #603D82; }
+.badge-cash       { background-color: #FFF8E1; color: #8A6D1F; }
+.badge-crypto     { background-color: #FFF3E0; color: #D95D5D; }
+.badge-default    { background-color: #F5F5F7; color: #4B5563; }
 
 .main-detail { flex: 1; background: var(--card-bg); overflow-y: auto; display: flex; flex-direction: column; position: relative; scroll-behavior: smooth; }
 
@@ -271,7 +253,7 @@ body.hide-header header {
   display: none; 
   background: none; 
   border: none; 
-  font-size: 20px; 
+  font-size: 16px; 
   font-weight: 700; 
   color: var(--text-main); 
   cursor: pointer; 
@@ -279,7 +261,7 @@ body.hide-header header {
 }
 
 .btn-action {
-  background: var(--text-main); color: white; border: none; padding: 7px 12px;
+  background: var(--text-main); color: white; border: none; padding: 7px 14px;
   border-radius: 18px; font-size: 12px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;
 }
@@ -400,7 +382,7 @@ body.hide-header header {
 }
 .back-to-top-btn:hover { transform: translateY(-3px); }
 
-/* 底部 iOS 毛玻璃 Tab Bar */
+/* iOS 底部毛玻璃 Tab Bar */
 .ios-tab-bar {
   position: fixed;
   bottom: 0;
@@ -544,7 +526,7 @@ select:focus,
   font-size: 14px;
 }
 
-/* 分類搜尋抽屜樣式：父分類 Header + 縮排子分類 */
+/* 分類搜尋抽屜 */
 .category-picker-trigger {
   display: flex;
   justify-content: space-between;
@@ -605,7 +587,6 @@ select:focus,
   body.mobile-view-detail .main-detail { display: flex; }
   body.mobile-view-detail .btn-back { display: inline-block; }
 
-  /* 進入明細頁時自動隱藏頂部 Hero Net Worth Header */
   body.mobile-view-detail header {
     display: none !important;
   }

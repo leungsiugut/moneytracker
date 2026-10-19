@@ -19,7 +19,6 @@ window.openStatementModal = function() {
   document.getElementById('stmt-due-date').value = '';
   document.getElementById('stmt-target-amount').value = '';
 
-  // 預設日期區間：結束日為今日，開始日為 30 天前
   const toDateStr = today.toISOString().split('T')[0];
   const fromDate = new Date();
   fromDate.setDate(fromDate.getDate() - 30);
@@ -40,7 +39,6 @@ window.filterStatementTxs = function() {
   const fromDate = document.getElementById('stmt-from-date').value;
   const toDate = document.getElementById('stmt-to-date').value;
 
-  // 取得該信用卡所有未入帳單的支出
   let unbilledTxs = transactions.filter(t => 
     t.accountId === currentAcc.id && 
     t.type === 'expense' && 
@@ -54,7 +52,6 @@ window.filterStatementTxs = function() {
     unbilledTxs = unbilledTxs.filter(t => normalizeDateString(t.date) <= toDate);
   }
 
-  // 依日期升序排列
   unbilledTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const listContainer = document.getElementById('stmt-tx-checklist');

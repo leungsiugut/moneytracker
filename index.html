@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#FAF9F6">
 
   <!-- iOS 桌面圖示 (Apple Touch Icon) -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
 
   <!-- 外部依賴 CDN -->
@@ -25,25 +25,22 @@
 </head>
 <body>
 
-  <!-- PWA 下拉刷新提示指示器 -->
-  <div id="pwa-pull-indicator">
-    <span>🔄 放開以重新整理網頁...</span>
-  </div>
-
-  <!-- 全域頂部 Header：在明細頁或非戶口分頁時可自動切換顯示 -->
+  <!-- 全域頂部 Header：右側置入手動同步鈕 -->
   <header id="app-global-header">
     <div class="header-left">
-      <div class="net-worth-box" onclick="openReportModal()" title="點擊檢視資產走勢">
+      <div class="net-worth-box" onclick="switchMainTab('accounts'); openReportModal();" title="點擊檢視資產走勢">
         <span class="net-worth-title" id="header-networth-title">Net Worth (CAD 📈)</span>
         <span class="net-worth-amt" id="total-net-worth">$0.00</span>
-        <div class="sync-status" id="sync-status-indicator" onclick="event.stopPropagation(); manualSyncFromCloud();" title="點擊連線或重整雲端">
-          <span>☁️</span> <span id="sync-status-text">未連線（點擊設定）</span>
-        </div>
       </div>
+    </div>
+    <div class="header-right">
+      <button class="sync-status" id="btn-manual-sync" type="button" onclick="manualSyncTrigger()" title="點擊連線並同步 Google Sheet">
+        <span id="sync-icon">☁️</span> <span id="sync-text">已同步</span>
+      </button>
     </div>
   </header>
 
-  <!-- 主容器 (包裹三大平級 View) -->
+  <!-- 主視口容器 -->
   <div class="app-main-viewport">
     
     <!-- View 1: 戶口列表與明細 View -->
@@ -56,7 +53,7 @@
         <div id="sidebar-accounts" style="display:flex; flex-direction:column; gap:12px;"></div>
       </div>
 
-      <!-- 帳戶流水詳情獨立視圖 -->
+      <!-- 帳戶流水詳情視圖 -->
       <div class="main-detail" id="main-detail-scroll" onscroll="handleMainScroll(this)">
         <div class="sticky-control-panel">
           <div class="detail-header">
@@ -70,12 +67,12 @@
             <div style="display: flex; gap: 6px; align-items: center;">
               <!-- 信用卡專屬：對帳單按鈕 -->
               <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
-              <!-- 📷 OCR 截圖按鈕（歸位至明細頂部動作列） -->
+              <!-- 📷 OCR 截圖按鈕 -->
               <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
               <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" title="截圖記帳">📷</button>
               <!-- 帳戶設定與記帳 -->
               <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
-              <button class="btn-action" onclick="openTxModal()" title="記一筆">＋</button>
+              <button class="btn-action" onclick="openTxPage(null)" title="記一筆">＋</button>
             </div>
           </div>
 
@@ -152,42 +149,24 @@
       </div>
     </div>
 
-  </div>
-
-  <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
-
-  <!-- 底部 iOS 毛玻璃三 Tab Bar -->
-  <nav class="ios-tab-bar">
-    <button class="tab-item active" id="tab-nav-accounts" type="button" onclick="switchMainTab('accounts')">
-      <div class="tab-pill">🪪</div>
-      <span>戶口</span>
-    </button>
-    <button class="tab-item" id="tab-nav-debts" type="button" onclick="switchMainTab('debts')">
-      <div class="tab-pill">🚩</div>
-      <span>借貸</span>
-    </button>
-    <button class="tab-item" id="tab-nav-settings" type="button" onclick="switchMainTab('settings')">
-      <div class="tab-pill">⚙️</div>
-      <span>設定</span>
-    </button>
-  </nav>
-
-  <!-- Modal：交易錄入 -->
-  <div class="modal-overlay" id="tx-modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <span id="tx-modal-title">記一筆交易</span>
-        <button onclick="closeModal('tx-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
+    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View（升級替換 tx-modal） -->
+    <div id="view-tx-form" class="main-page-view" style="display: none; background: var(--card-bg);">
+      <div class="page-view-header">
+        <button class="btn-back" type="button" onclick="closeTxPage()" style="display: inline-block;">‹ 取消</button>
+        <h2 id="tx-page-title" style="font-size: 16px; font-weight: 700;">記一筆交易</h2>
+        <button class="btn-action" type="button" onclick="saveTransactionFromPage()">儲存</button>
       </div>
-      <div class="modal-body">
+
+      <div class="tx-form-body" style="padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; max-width: 680px; margin: 0 auto; width: 100%;">
         <input type="hidden" id="tx-id">
         <div class="type-tabs" id="modal-type-tabs"></div>
 
         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
-          <input type="checkbox" id="tx-is-pending" style="width: 16px; height: 16px; cursor: pointer;">
-          <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為未還 / Pending（置頂釘選）</label>
+          <input type="checkbox" id="tx-is-pending" style="width: 18px; height: 18px; cursor: pointer;">
+          <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為待還款（內部借貸合約）</label>
         </div>
 
+        <!-- 帳戶轉出/單帳戶列 -->
         <div id="f-group-from-container">
           <div class="form-group" id="f-group-single-acc">
             <label id="label-from-acc">帳戶</label>
@@ -198,6 +177,7 @@
           </div>
         </div>
 
+        <!-- 帳戶轉入列 (Transfer / Exchange) -->
         <div id="f-group-target-container" style="display: none;">
           <div class="form-group">
             <label>轉入戶口</label>
@@ -210,7 +190,7 @@
 
         <div class="form-group" id="f-group-title">
           <label id="label-title">標題 / 商戶</label>
-          <input type="text" id="tx-title" placeholder="例如：Specialty Coffee">
+          <input type="text" id="tx-title" placeholder="例如：Specialty Coffee / 超級市場">
         </div>
 
         <div class="form-group" id="f-group-category">
@@ -280,14 +260,32 @@
           <label>日期</label>
           <input type="date" id="tx-date">
         </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-action btn-secondary" id="btn-delete-tx" onclick="deleteCurrentTx()" style="display:none; color:#D95D5D;">刪除</button>
-        <button class="btn-action btn-secondary" onclick="closeModal('tx-modal')">取消</button>
-        <button class="btn-action" onclick="saveTransaction()">確認儲存</button>
+
+        <button type="button" id="btn-delete-tx-page" class="btn-action btn-secondary" style="margin-top: 24px; color: #D95D5D; display: none; padding: 12px;" onclick="deleteCurrentTxFromPage()">
+          🗑️ 刪除此交易
+        </button>
       </div>
     </div>
+
   </div>
+
+  <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
+
+  <!-- iOS 底部毛玻璃三 Tab Bar -->
+  <nav class="ios-tab-bar">
+    <button class="tab-item active" id="tab-nav-accounts" type="button" onclick="switchMainTab('accounts')">
+      <div class="tab-pill">🪪</div>
+      <span>戶口</span>
+    </button>
+    <button class="tab-item" id="tab-nav-debts" type="button" onclick="switchMainTab('debts')">
+      <div class="tab-pill">🚩</div>
+      <span>借貸</span>
+    </button>
+    <button class="tab-item" id="tab-nav-settings" type="button" onclick="switchMainTab('settings')">
+      <div class="tab-pill">⚙️</div>
+      <span>設定</span>
+    </button>
+  </nav>
 
   <!-- Modal：新增 / 編輯 Category -->
   <div class="modal-overlay" id="cat-edit-modal">
@@ -438,9 +436,9 @@
     </div>
   </div>
 
-  <!-- Modal：還款歷史記錄 Modal -->
+  <!-- Modal：還款歷史記錄 Modal（支援編輯與刪除） -->
   <div class="modal-overlay" id="repay-log-modal">
-    <div class="modal-card" style="max-width: 400px;">
+    <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <span>還款記錄明細</span>
         <button type="button" onclick="closeModal('repay-log-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
@@ -452,7 +450,7 @@
     </div>
   </div>
 
-  <!-- Modal：信用卡對帳單 Modal（已升級日期區間篩選與全選控制） -->
+  <!-- Modal：信用卡對帳單 Modal -->
   <div class="modal-overlay" id="statement-modal">
     <div class="modal-card" style="max-width: 480px;">
       <div class="modal-header">
@@ -474,7 +472,6 @@
             <input type="number" step="0.01" id="stmt-target-amount" placeholder="0.00" oninput="updateStmtCheckSum()">
           </div>
 
-          <!-- 日期區間過濾列 -->
           <div style="display: flex; gap: 8px; margin-top: 4px;">
             <div class="form-group" style="flex:1;">
               <label>開始日期 (From)</label>
