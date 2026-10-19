@@ -58,14 +58,13 @@
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 6px; align-items: center;">
+    <div style="display: flex; gap: 8px; align-items: center;">
       <!-- 純 Icon 頂部按鈕 -->
       <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
       <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" style="position: relative; z-index: 1001;" title="截圖記帳">📷</button>
       
       <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
       <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()" title="匯入 CSV">📁</button>
-      <button type="button" class="btn-action btn-secondary" onclick="openSettingsModal()" title="設定">⚙️</button>
     </div>
   </header>
 
@@ -115,6 +114,18 @@
   </div>
 
   <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
+
+  <!-- iOS 底部雙 Tab Bar -->
+  <nav class="ios-tab-bar">
+    <button class="tab-item active" type="button" onclick="goBackToList()">
+      <div class="tab-pill">🪪</div>
+      <span>戶口</span>
+    </button>
+    <button class="tab-item" type="button" onclick="openSettingsModal()">
+      <div class="tab-pill">⚙️</div>
+      <span>設定</span>
+    </button>
+  </nav>
 
   <!-- Modal：綜合設定 (Settings) -->
   <div class="modal-overlay" id="settings-modal">
@@ -325,6 +336,7 @@
             <option value="savings">Savings</option>
             <option value="credit">Credit Card</option>
             <option value="investment">Investment</option>
+            <option value="crypto">Crypto</option>
             <option value="cash">Cash</option>
           </select>
         </div>

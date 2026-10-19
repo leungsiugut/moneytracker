@@ -101,6 +101,22 @@ function getAccountTypeIcon(type) {
   }
 }
 
+// 輔助函式：取得馬卡龍背景 class
+function getAccountTypeBadgeClass(type) {
+  const t = (type || '').toLowerCase();
+  switch (t) {
+    case 'checking': return 'badge-checking';
+    case 'savings': return 'badge-savings';
+    case 'credit':
+    case 'credit_card': return 'badge-credit';
+    case 'investment':
+    case 'brokerage': return 'badge-investment';
+    case 'cash': return 'badge-cash';
+    case 'crypto': return 'badge-crypto';
+    default: return 'badge-default';
+  }
+}
+
 function initCurrencyDropdowns() {
   const selects = [
     document.getElementById('setting-base-currency'),
@@ -805,13 +821,14 @@ window.renderApp = function() {
     groupAccs.forEach(acc => {
       const accVal = getAccountTotalValue(acc.id);
       const icon = getAccountTypeIcon(acc.type);
+      const badgeClass = getAccountTypeBadgeClass(acc.type);
       const item = document.createElement('div');
       item.className = `account-item ${acc.id === currentAccountId ? 'active' : ''}`;
       item.onclick = () => selectAccount(acc.id);
       
       item.innerHTML = `
         <div style="display: flex; align-items: center;">
-          <div class="account-icon-badge">${icon}</div>
+          <div class="account-icon-badge ${badgeClass}">${icon}</div>
           <div class="account-info">
             <span class="account-name">${acc.name}</span>
           </div>
