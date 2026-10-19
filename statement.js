@@ -19,19 +19,50 @@ window.openStatementModal = function() {
   document.getElementById('stmt-due-date').value = '';
   document.getElementById('stmt-target-amount').value = '';
 
+  // 預設日期區間：結束日為今日，開始日為 30 天前
+  const toDateStr = today.toISOString().split('T')[0];
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - 30);
+  const fromDateStr = fromDate.toISOString().split('T')[0];
+
+  document.getElementById('stmt-to-date').value = toDateStr;
+  document.getElementById('stmt-from-date').value = fromDateStr;
+
+  filterStatementTxs();
+  openModal('statement-modal');
+};
+
+// 根據日期區間篩選交易
+window.filterStatementTxs = function() {
+  const currentAcc = accounts.find(a => a.id === currentAccountId);
+  if (!currentAcc) return;
+
+  const fromDate = document.getElementById('stmt-from-date').value;
+  const toDate = document.getElementById('stmt-to-date').value;
+
   // 取得該信用卡所有未入帳單的支出
-  const unbilledTxs = transactions.filter(t => 
+  let unbilledTxs = transactions.filter(t => 
     t.accountId === currentAcc.id && 
     t.type === 'expense' && 
     !t.statementId
   );
+
+  if (fromDate) {
+    unbilledTxs = unbilledTxs.filter(t => normalizeDateString(t.date) >= fromDate);
+  }
+  if (toDate) {
+    unbilledTxs = unbilledTxs.filter(t => normalizeDateString(t.date) <= toDate);
+  }
+
+  // 依日期升序排列
+  unbilledTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const listContainer = document.getElementById('stmt-tx-checklist');
   if (!listContainer) return;
   listContainer.innerHTML = '';
 
   if (unbilledTxs.length === 0) {
-    listContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 20px 0; font-size:12.5px;">目前無未結算的信用卡支出</p>';
+    listContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 20px 0; font-size:12.5px;">此日期區間無未結算的信用卡支出</p>';
   } else {
     unbilledTxs.forEach(t => {
       const row = document.createElement('div');
@@ -39,7 +70,7 @@ window.openStatementModal = function() {
       row.innerHTML = `
         <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer; flex:1; min-width:0;">
           <input type="checkbox" class="stmt-check-item" value="${t.id}" data-amount="${t.amount}" checked onchange="updateStmtCheckSum()">
-          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.date} · ${t.title}</span>
+          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${normalizeDateString(t.date)} · ${t.title}</span>
         </label>
         <span style="font-weight:700; font-size:12.5px; margin-left:8px; white-space:nowrap;">$${parseFloat(t.amount).toFixed(2)}</span>
       `;
@@ -48,7 +79,15 @@ window.openStatementModal = function() {
   }
 
   updateStmtCheckSum();
-  openModal('statement-modal');
+};
+
+// 一鍵全選 / 取消全選
+window.toggleAllStmtTxs = function() {
+  const checkboxes = document.querySelectorAll('.stmt-check-item');
+  if (checkboxes.length === 0) return;
+  const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
+  checkboxes.forEach(cb => { cb.checked = anyUnchecked; });
+  updateStmtCheckSum();
 };
 
 // 動態加總勾選金額
@@ -89,7 +128,6 @@ window.saveStatement = function() {
     isPaid: false
   };
 
-  // 關聯交易的 statementId
   transactions.forEach(t => {
     if (selectedTxIds.includes(t.id)) {
       t.statementId = stmtId;

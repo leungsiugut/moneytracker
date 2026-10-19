@@ -267,7 +267,7 @@ window.pullFromGoogleSheet = async function() {
 };
 
 window.manualSyncFromCloud = function() {
-  if (!SCRIPT_URL) { openSettingsModal(); return; }
+  if (!SCRIPT_URL) { switchMainTab('settings'); return; }
   pullFromGoogleSheet();
 };
 
@@ -529,7 +529,7 @@ function processMoneyWizCSVNative(grid) {
   }
 }
 
-/* 1. 修復 Apple Wallet 截圖 OCR 標題提取演算法（以金額行定位商戶，剔除狀態列） */
+// Apple Wallet 截圖 OCR 辨識
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -862,6 +862,7 @@ window.renderApp = function() {
 
   renderDetailView();
   if (window.renderDebtTrackerView) window.renderDebtTrackerView();
+  renderCategoryTree();
 };
 
 window.toggleGroupCollapse = function(grpId) {
@@ -873,11 +874,13 @@ window.toggleGroupCollapse = function(grpId) {
 window.selectAccount = function(accId) {
   currentAccountId = accId;
   document.body.classList.add('mobile-view-detail');
+  document.body.classList.add('hide-header');
   renderApp();
 };
 
 window.goBackToList = function() {
   document.body.classList.remove('mobile-view-detail');
+  document.body.classList.remove('hide-header');
   switchMainTab('accounts');
 };
 
@@ -895,25 +898,43 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-/* 3. 主頁 Tab 切換函式掛載（三 Tab：戶口 / 借貸 / 設定） */
+// 三大平級主 View 切換
 window.switchMainTab = function(tab) {
   document.querySelectorAll('.ios-tab-bar .tab-item').forEach(el => el.classList.remove('active'));
-  const appContainer = document.querySelector('.app-container');
-  const debtView = document.getElementById('view-debt-tracker');
+  
+  const viewAccounts = document.getElementById('view-accounts');
+  const viewDebts = document.getElementById('view-debt-tracker');
+  const viewSettings = document.getElementById('view-settings');
+  const globalHeader = document.getElementById('app-global-header');
+
+  if (viewAccounts) viewAccounts.style.display = 'none';
+  if (viewDebts) viewDebts.style.display = 'none';
+  if (viewSettings) viewSettings.style.display = 'none';
 
   if (tab === 'accounts') {
     const navAcc = document.getElementById('tab-nav-accounts');
     if (navAcc) navAcc.classList.add('active');
-    if (debtView) debtView.style.display = 'none';
-    if (appContainer) appContainer.style.display = 'flex';
+    if (viewAccounts) viewAccounts.style.display = 'flex';
+    if (!document.body.classList.contains('mobile-view-detail')) {
+      document.body.classList.remove('hide-header');
+    }
   } else if (tab === 'debts') {
     const navDebts = document.getElementById('tab-nav-debts');
     if (navDebts) navDebts.classList.add('active');
-    if (appContainer) appContainer.style.display = 'none';
-    if (debtView) {
-      debtView.style.display = 'flex';
-      if (window.renderDebtTrackerView) window.renderDebtTrackerView();
-    }
+    if (viewDebts) viewDebts.style.display = 'flex';
+    document.body.classList.add('hide-header');
+    if (window.renderDebtTrackerView) window.renderDebtTrackerView();
+  } else if (tab === 'settings') {
+    const navSettings = document.getElementById('tab-nav-settings');
+    if (navSettings) navSettings.classList.add('active');
+    if (viewSettings) viewSettings.style.display = 'flex';
+    document.body.classList.add('hide-header');
+    
+    const baseCur = document.getElementById('setting-base-currency');
+    const cloudUrl = document.getElementById('setting-cloud-url');
+    if (baseCur) baseCur.value = baseCurrency;
+    if (cloudUrl) cloudUrl.value = SCRIPT_URL;
+    renderCategoryTree();
   }
 };
 
@@ -1017,8 +1038,11 @@ function renderTransactions(currentAcc) {
 
   accTxs.sort((a,b) => new Date(b.date) - new Date(a.date));
 
-  const pendingTxs = accTxs.filter(t => t.isPending);
-  const regularTxs = accTxs.filter(t => !t.isPending);
+  // 統一 Pending 判定（相容 boolean 與字串 "TRUE"）
+  const isPendingTx = (t) => t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
+
+  const pendingTxs = accTxs.filter(isPendingTx);
+  const regularTxs = accTxs.filter(t => !isPendingTx(t));
 
   container.innerHTML = '';
 
@@ -1070,8 +1094,9 @@ function renderTransactions(currentAcc) {
 }
 
 function createTxElement(tx, currentAcc) {
+  const isPending = tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE';
   const item = document.createElement('div');
-  item.className = `tx-item ${tx.isPending ? 'pending-item' : ''}`;
+  item.className = `tx-item ${isPending ? 'pending-item' : ''}`;
 
   let icon = '📝';
   let title = tx.title || '交易';
@@ -1147,7 +1172,7 @@ function createTxElement(tx, currentAcc) {
         title = `兌換至 ${toAcc ? toAcc.name : ''}`;
         amtClass = 'transfer';
         amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}</span>`;
+        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}</span>`;
       } else {
         title = `由 ${fromAcc ? fromAcc.name : ''} 存入`;
         amtClass = 'income';
@@ -1187,7 +1212,7 @@ function createTxElement(tx, currentAcc) {
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
       <div class="tx-amt ${amtClass}">${amtStr}</div>
-      <button class="flag-toggle-btn ${tx.isPending ? 'flagged' : ''}" title="切換待還狀態" onclick="event.stopPropagation(); toggleTxFlag('${tx.id}')">🚩</button>
+      <button class="flag-toggle-btn ${isPending ? 'flagged' : ''}" title="切換待還狀態" onclick="event.stopPropagation(); toggleTxFlag('${tx.id}')">🚩</button>
     </div>
   `;
   return item;
@@ -1196,7 +1221,8 @@ function createTxElement(tx, currentAcc) {
 window.toggleTxFlag = function(txId) {
   const tx = transactions.find(t => t.id === txId);
   if (tx) {
-    tx.isPending = !tx.isPending;
+    const curPending = tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE';
+    tx.isPending = !curPending;
     if (tx.linkedTxId) {
       const linked = transactions.find(t => t.id === tx.linkedTxId);
       if (linked) linked.isPending = tx.isPending;
@@ -1291,7 +1317,7 @@ window.switchTxTab = function(type) {
   }
 };
 
-/* 2. 整合分類抽屜選取器（Searchable Category Picker） */
+// 恢復層級：父類別 Header + 縮排子分類清單
 window.openCatPicker = function() {
   const searchInput = document.getElementById('cat-picker-search');
   if (searchInput) searchInput.value = '';
@@ -1315,31 +1341,38 @@ window.renderPickerCategories = function(flowType, keyword = '') {
 
     if (kw && !parentMatches && matchedChildren.length === 0) return;
 
-    const showChildren = kw ? (parentMatches ? children : matchedChildren) : children;
-
-    if (showChildren.length === 0) {
-      const row = document.createElement('div');
-      row.className = 'picker-cat-row';
-      row.innerHTML = `<span style="font-size:18px;">${p.icon}</span><span style="font-size:13.5px; font-weight:600;">${p.name}</span>`;
-      row.onclick = () => {
+    // 渲染父分類 Header
+    const headerEl = document.createElement('div');
+    headerEl.className = 'picker-cat-header';
+    headerEl.innerHTML = `<span>${p.icon}</span><span>${p.name}</span>`;
+    
+    // 如果父分類本身沒有子分類，則點擊 Header 即可選取
+    if (children.length === 0) {
+      headerEl.style.cursor = 'pointer';
+      headerEl.onclick = () => {
         document.getElementById('tx-category').value = p.id;
         document.getElementById('tx-cat-display-name').innerText = `${p.icon} ${p.name}`;
         closeModal('cat-picker-drawer');
       };
-      container.appendChild(row);
-    } else {
-      showChildren.forEach(ch => {
-        const row = document.createElement('div');
-        row.className = 'picker-cat-row';
-        row.innerHTML = `<span style="font-size:18px;">${ch.icon}</span><span style="font-size:13.5px; font-weight:600;">${p.name} > ${ch.name}</span>`;
-        row.onclick = () => {
-          document.getElementById('tx-category').value = ch.id;
-          document.getElementById('tx-cat-display-name').innerText = `${ch.icon} ${ch.name}`;
-          closeModal('cat-picker-drawer');
-        };
-        container.appendChild(row);
-      });
+      container.appendChild(headerEl);
+      return;
     }
+
+    container.appendChild(headerEl);
+
+    // 渲染專屬子分類（只顯示子分類名稱）
+    const showChildren = kw ? (parentMatches ? children : matchedChildren) : children;
+    showChildren.forEach(ch => {
+      const row = document.createElement('div');
+      row.className = 'picker-cat-row child-indent';
+      row.innerHTML = `<span style="font-size:16px;">${ch.icon}</span><span style="font-size:13.5px; font-weight:600;">${ch.name}</span>`;
+      row.onclick = () => {
+        document.getElementById('tx-category').value = ch.id;
+        document.getElementById('tx-cat-display-name').innerText = `${ch.icon} ${p.name} > ${ch.name}`;
+        closeModal('cat-picker-drawer');
+      };
+      container.appendChild(row);
+    });
   });
 };
 
@@ -1556,7 +1589,7 @@ window.openEditTxModal = function(txId) {
 
   document.getElementById('tx-id').value = tx.id;
   document.getElementById('tx-modal-title').innerText = '編輯交易';
-  document.getElementById('tx-is-pending').checked = !!tx.isPending;
+  document.getElementById('tx-is-pending').checked = (tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE');
   
   setupModalTypeTabs(isInvest);
   
@@ -1823,15 +1856,6 @@ window.handleMainScroll = function(el) {
 window.scrollToTop = function() {
   const el = document.getElementById('main-detail-scroll');
   if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-window.openSettingsModal = function() {
-  const baseCur = document.getElementById('setting-base-currency');
-  const cloudUrl = document.getElementById('setting-cloud-url');
-  if (baseCur) baseCur.value = baseCurrency;
-  if (cloudUrl) cloudUrl.value = SCRIPT_URL;
-  switchCatViewType('expense');
-  openModal('settings-modal');
 };
 
 window.changeBaseCurrency = function(cur) {
@@ -2119,10 +2143,7 @@ window.deleteCurrentAccount = function() {
 
 window.openGroupModal = function() {
   const modal = document.getElementById('group-modal');
-  if (!modal) {
-    console.error('找不到 #group-modal 元素');
-    return;
-  }
+  if (!modal) return;
   document.getElementById('group-id').value = '';
   document.getElementById('group-modal-title').innerText = '新增帳戶分組';
   document.getElementById('group-name').value = '';
@@ -2195,7 +2216,7 @@ window.deleteCurrentGroup = function() {
   saveData();
 };
 
-// PWA 下拉刷新手勢監聽與強刷邏輯
+// PWA 下拉刷新
 let touchStartY = 0;
 let isPulling = false;
 const pullIndicator = document.getElementById('pwa-pull-indicator');
@@ -2241,7 +2262,7 @@ window.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-// 初始化執行保護
+// 初始化
 try {
   if (typeof initCurrencyDropdowns === 'function') initCurrencyDropdowns();
   if (typeof updateFXRates === 'function') updateFXRates(typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');

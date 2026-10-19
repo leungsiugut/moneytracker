@@ -12,26 +12,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#FAF9F6">
 
-  <!-- iOS 桌面圖示 (Apple Touch Icon)：深灰底 + 暖黃幾何金幣豬仔 -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
-
-  <!-- 瀏覽器分頁 Favicon -->
+  <!-- iOS 桌面圖示 (Apple Touch Icon) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
-
-  <!-- 支援 PWA 安裝之 Manifest -->
-  <link rel="manifest" href="data:application/manifest+json;utf8,{
-    %22name%22:%22MoneyTracker%22,
-    %22short_name%22:%22MoneyTracker%22,
-    %22start_url%22:%22.%22,
-    %22display%22:%22standalone%22,
-    %22background_color%22:%22%23FAF9F6%22,
-    %22theme_color%22:%22%23343A40%22,
-    %22icons%22:[{
-      %22src%22:%22data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>%22,
-      %22sizes%22:%22180x180%22,
-      %22type%22:%22image/svg+xml%22
-    }]
-  }">
 
   <!-- 外部依賴 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -47,89 +30,133 @@
     <span>🔄 放開以重新整理網頁...</span>
   </div>
 
-  <header>
+  <!-- 全域頂部 Header：在明細頁或非戶口分頁時可自動切換顯示 -->
+  <header id="app-global-header">
     <div class="header-left">
       <div class="net-worth-box" onclick="openReportModal()" title="點擊檢視資產走勢">
         <span class="net-worth-title" id="header-networth-title">Net Worth (CAD 📈)</span>
         <span class="net-worth-amt" id="total-net-worth">$0.00</span>
-        <!-- 下移之 Sync 狀態標籤 -->
         <div class="sync-status" id="sync-status-indicator" onclick="event.stopPropagation(); manualSyncFromCloud();" title="點擊連線或重整雲端">
           <span>☁️</span> <span id="sync-status-text">未連線（點擊設定）</span>
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <!-- 純 Icon 頂部按鈕 -->
-      <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
-      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" style="position: relative; z-index: 1001;" title="截圖記帳">📷</button>
-      
-      <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
-      <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()" title="匯入 CSV">📁</button>
-    </div>
   </header>
 
-  <div class="app-container">
-    <div class="sidebar">
-      <div class="sidebar-actions">
-        <button type="button" class="btn-action" style="flex:1;" onclick="openAccountModal()">+ 新增 Account</button>
-        <button type="button" class="btn-action btn-secondary" style="flex:1;" onclick="openGroupModal()">+ 新增 Group</button>
+  <!-- 主容器 (包裹三大平級 View) -->
+  <div class="app-main-viewport">
+    
+    <!-- View 1: 戶口列表與明細 View -->
+    <div class="app-container" id="view-accounts">
+      <div class="sidebar">
+        <div class="sidebar-actions">
+          <button type="button" class="btn-action" style="flex:1;" onclick="openAccountModal()">+ 新增 Account</button>
+          <button type="button" class="btn-action btn-secondary" style="flex:1;" onclick="openGroupModal()">+ 新增 Group</button>
+        </div>
+        <div id="sidebar-accounts" style="display:flex; flex-direction:column; gap:12px;"></div>
       </div>
-      <div id="sidebar-accounts" style="display:flex; flex-direction:column; gap:12px;"></div>
-    </div>
 
-    <!-- 帳戶流水詳情視圖 -->
-    <div class="main-detail" id="main-detail-scroll" onscroll="handleMainScroll(this)">
-      <div class="sticky-control-panel">
-        <div class="detail-header">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <!-- 圖示化返回按鈕 -->
-            <button class="btn-back" onclick="goBackToList()" title="返回">‹</button>
-            <div>
-              <h2 id="current-account-name" style="font-size: 17px; font-weight: 700;">請選擇帳戶</h2>
-              <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
+      <!-- 帳戶流水詳情獨立視圖 -->
+      <div class="main-detail" id="main-detail-scroll" onscroll="handleMainScroll(this)">
+        <div class="sticky-control-panel">
+          <div class="detail-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="btn-back" onclick="goBackToList()" title="返回">‹</button>
+              <div>
+                <h2 id="current-account-name" style="font-size: 17px; font-weight: 700;">請選擇帳戶</h2>
+                <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <!-- 信用卡專屬：對帳單按鈕 -->
+              <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
+              <!-- 📷 OCR 截圖按鈕（歸位至明細頂部動作列） -->
+              <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
+              <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" title="截圖記帳">📷</button>
+              <!-- 帳戶設定與記帳 -->
+              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
+              <button class="btn-action" onclick="openTxModal()" title="記一筆">＋</button>
             </div>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <!-- 信用卡專屬：對帳單按鈕 -->
-            <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
-            <!-- 圖示化編輯筆與加號按鈕 -->
-            <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
-            <button class="btn-action" onclick="openTxModal()" title="記一筆">＋</button>
+
+          <div class="search-bar-wrap">
+            <span>🔍</span>
+            <input type="text" class="search-input" id="tx-search-input" placeholder="搜尋交易商戶、分類、備註、日期..." oninput="handleSearchInput(this.value)">
+          </div>
+
+          <div class="invest-subtabs" id="invest-subtabs" style="display: none;">
+            <div class="invest-tab-group">
+              <button class="invest-tab-btn active" id="tab-btn-holdings" onclick="switchInvestSubTab('holdings')">Holdings (持倉)</button>
+              <button class="invest-tab-btn" id="tab-btn-txs" onclick="switchInvestSubTab('transactions')">Transactions (流水帳)</button>
+            </div>
+            <button class="btn-action btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="refreshLiveStockPrices()">🔄 更新市價</button>
           </div>
         </div>
 
-        <div class="search-bar-wrap">
-          <span>🔍</span>
-          <input type="text" class="search-input" id="tx-search-input" placeholder="搜尋交易商戶、分類、備註、日期..." oninput="handleSearchInput(this.value)">
-        </div>
-
-        <div class="invest-subtabs" id="invest-subtabs" style="display: none;">
-          <div class="invest-tab-group">
-            <button class="invest-tab-btn active" id="tab-btn-holdings" onclick="switchInvestSubTab('holdings')">Holdings (持倉)</button>
-            <button class="invest-tab-btn" id="tab-btn-txs" onclick="switchInvestSubTab('transactions')">Transactions (流水帳)</button>
-          </div>
-          <button class="btn-action btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="refreshLiveStockPrices()">🔄 更新市價</button>
-        </div>
+        <div id="content-container"></div>
       </div>
-
-      <div id="content-container"></div>
     </div>
 
-    <!-- 內部待還款中心獨立 View -->
-    <div id="view-debt-tracker" class="main-detail" style="display: none;">
-      <div class="detail-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <h2 style="font-size: 17px; font-weight: 700;">🚩 內部借貸待還中心</h2>
-        </div>
+    <!-- View 2: 內部待還款中心獨立 View -->
+    <div id="view-debt-tracker" class="main-page-view" style="display: none;">
+      <div class="page-view-header">
+        <h2 style="font-size: 18px; font-weight: 700;">🚩 內部借貸待還中心</h2>
         <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: $0.00</div>
       </div>
-      <div id="debt-cards-container" style="padding: 14px 20px; overflow-y: auto;"></div>
+      <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
+
+    <!-- View 3: 系統設定獨立 Page View -->
+    <div id="view-settings" class="main-page-view" style="display: none;">
+      <div class="page-view-header">
+        <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>
+      </div>
+      <div class="settings-page-content">
+        <div class="settings-card">
+          <div class="form-group">
+            <label>基準貨幣 (Base Currency)</label>
+            <select id="setting-base-currency" onchange="changeBaseCurrency(this.value)"></select>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="form-group">
+            <label>Google Apps Script Web App URL</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="setting-cloud-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;">
+              <button class="btn-action" onclick="saveCloudConfigFromSettings()">儲存連線</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">數據管理</label>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+            <span style="font-size: 13.5px; font-weight: 500;">匯入 MoneyWiz 歷史交易 CSV</span>
+            <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
+            <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()">📂 匯入 CSV</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">分類維護清單</label>
+            <button class="btn-action" style="padding: 4px 10px; font-size: 11px;" onclick="openAddCategoryModal(null)">+ 新增父類別</button>
+          </div>
+          <div class="type-tabs" style="margin-bottom: 8px;">
+            <button type="button" class="type-tab active" id="tab-cat-exp" onclick="switchCatViewType('expense')">Expenses</button>
+            <button type="button" class="type-tab" id="tab-cat-inc" onclick="switchCatViewType('income')">Incomes</button>
+          </div>
+          <div id="cat-tree-container" style="display: flex; flex-direction: column;"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
 
-  <!-- iOS 底部三 Tab Bar -->
+  <!-- 底部 iOS 毛玻璃三 Tab Bar -->
   <nav class="ios-tab-bar">
     <button class="tab-item active" id="tab-nav-accounts" type="button" onclick="switchMainTab('accounts')">
       <div class="tab-pill">🪪</div>
@@ -139,49 +166,11 @@
       <div class="tab-pill">🚩</div>
       <span>借貸</span>
     </button>
-    <button class="tab-item" id="tab-nav-settings" type="button" onclick="openSettingsModal()">
+    <button class="tab-item" id="tab-nav-settings" type="button" onclick="switchMainTab('settings')">
       <div class="tab-pill">⚙️</div>
       <span>設定</span>
     </button>
   </nav>
-
-  <!-- Modal：綜合設定 (Settings) -->
-  <div class="modal-overlay" id="settings-modal">
-    <div class="modal-card" style="max-width: 520px;">
-      <div class="modal-header">
-        <span>⚙️ 系統設定</span>
-        <button onclick="closeModal('settings-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>基準貨幣</label>
-          <select id="setting-base-currency" onchange="changeBaseCurrency(this.value)"></select>
-        </div>
-        <div class="form-group">
-          <label>Google Apps Script Web App URL</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="setting-cloud-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;">
-            <button class="btn-action" onclick="saveCloudConfigFromSettings()">儲存連線</button>
-          </div>
-        </div>
-        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 6px 0;">
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">分類管理</label>
-            <button class="btn-action" style="padding: 4px 10px; font-size: 11px;" onclick="openAddCategoryModal(null)">+ 新增父類別</button>
-          </div>
-          <div class="type-tabs" style="margin-bottom: 8px;">
-            <button type="button" class="type-tab active" id="tab-cat-exp" onclick="switchCatViewType('expense')">Expenses</button>
-            <button type="button" class="type-tab" id="tab-cat-inc" onclick="switchCatViewType('income')">Incomes</button>
-          </div>
-          <div id="cat-tree-container" style="display: flex; flex-direction: column; max-height: 260px; overflow-y: auto;"></div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-action btn-secondary" onclick="closeModal('settings-modal')">關閉</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Modal：交易錄入 -->
   <div class="modal-overlay" id="tx-modal">
@@ -199,7 +188,6 @@
           <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為未還 / Pending（置頂釘選）</label>
         </div>
 
-        <!-- 轉出列 -->
         <div id="f-group-from-container">
           <div class="form-group" id="f-group-single-acc">
             <label id="label-from-acc">帳戶</label>
@@ -210,7 +198,6 @@
           </div>
         </div>
 
-        <!-- 轉入列 -->
         <div id="f-group-target-container" style="display: none;">
           <div class="form-group">
             <label>轉入戶口</label>
@@ -226,7 +213,6 @@
           <input type="text" id="tx-title" placeholder="例如：Specialty Coffee">
         </div>
 
-        <!-- 整合分類抽屜選取器觸發項 -->
         <div class="form-group" id="f-group-category">
           <label>分類</label>
           <input type="hidden" id="tx-category">
@@ -466,7 +452,7 @@
     </div>
   </div>
 
-  <!-- Modal：信用卡對帳單 Modal -->
+  <!-- Modal：信用卡對帳單 Modal（已升級日期區間篩選與全選控制） -->
   <div class="modal-overlay" id="statement-modal">
     <div class="modal-card" style="max-width: 480px;">
       <div class="modal-header">
@@ -487,11 +473,26 @@
             <label>銀行對帳單總額 (Target Balance)</label>
             <input type="number" step="0.01" id="stmt-target-amount" placeholder="0.00" oninput="updateStmtCheckSum()">
           </div>
+
+          <!-- 日期區間過濾列 -->
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <div class="form-group" style="flex:1;">
+              <label>開始日期 (From)</label>
+              <input type="date" id="stmt-from-date" onchange="filterStatementTxs()">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>結算日期 (To)</label>
+              <input type="date" id="stmt-to-date" onchange="filterStatementTxs()">
+            </div>
+          </div>
         </div>
 
         <div style="margin-top: 10px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">勾選本期交易</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">勾選本期交易</label>
+              <button type="button" class="btn-action btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="toggleAllStmtTxs()">全選 / 取消全選</button>
+            </div>
             <span id="stmt-calc-summary" style="font-size: 12px; font-weight: 700;">已勾選: $0.00</span>
           </div>
           <div id="stmt-tx-checklist" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 10px; padding: 6px;"></div>

@@ -8,6 +8,11 @@ window.getTxRepaidAmount = function(txId) {
     .reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
 };
 
+// 判定交易是否屬於 Pending（相容布林值與字串 "TRUE"）
+window.isPendingTx = function(t) {
+  return t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
+};
+
 // 渲染內部借貸專屬視圖
 window.renderDebtTrackerView = function() {
   const container = document.getElementById('debt-cards-container');
@@ -15,7 +20,7 @@ window.renderDebtTrackerView = function() {
   if (!container) return;
 
   container.innerHTML = '';
-  const pendingTxs = transactions.filter(t => t.isPending);
+  const pendingTxs = transactions.filter(window.isPendingTx);
 
   let totalRemaining = 0;
 

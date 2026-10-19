@@ -28,7 +28,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
 }
 
-/* 視窗與頂部 Header 佈局修復（解決動態島遮擋與按鈕點擊失效） */
 html, body {
   margin: 0;
   padding: 0;
@@ -60,6 +59,7 @@ html, body {
   transition: transform 0.2s ease;
 }
 
+/* 全域頂部 Header */
 header {
   flex-shrink: 0;
   box-sizing: border-box;
@@ -75,11 +75,16 @@ header {
   min-height: calc(60px + env(safe-area-inset-top));
   position: relative;
   z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+/* 進入明細頁或非戶口主頁時隱藏頂部 Hero Net Worth Header */
+body.hide-header header {
+  display: none !important;
 }
 
 .header-left { display: flex; align-items: center; gap: 14px; }
 
-/* 頂部 Net Worth 防斷行與 Sync Status 微標籤化 */
 .net-worth-box {
   display: flex;
   flex-direction: column;
@@ -103,7 +108,6 @@ header {
   white-space: nowrap;
 }
 
-/* 下移後的 Sync Status 微標籤 */
 .sync-status {
   font-size: 10.5px;
   font-weight: 500;
@@ -122,16 +126,12 @@ header {
 .sync-status.syncing { color: #8A6D1F; }
 .sync-status.error { color: #D95D5D; }
 
-/* 頂部純 Icon 按鈕樣式 */
-header .btn-action {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 10px;
+/* 主視口容器 */
+.app-main-viewport {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+  overflow: hidden;
+  position: relative;
 }
 
 .app-container {
@@ -139,6 +139,52 @@ header .btn-action {
   display: flex;
   overflow: hidden;
   position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* 平級獨立主頁面 View (Debts / Settings) */
+.main-page-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: calc(65px + env(safe-area-inset-bottom, 20px));
+}
+
+.page-view-header {
+  padding: 16px 20px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: max(16px, env(safe-area-inset-top));
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* 設定頁面內容佈局 */
+.settings-page-content {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.settings-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
 .sidebar {
@@ -147,7 +193,7 @@ header .btn-action {
 }
 .sidebar-actions { display: flex; gap: 8px; }
 
-/* --- 帳戶分組 (Group Card)：純白 iOS 卡片質感 --- */
+/* 帳戶分組 (Group Card) */
 .group-card {
   background: #FFFFFF !important;
   border-radius: 18px;
@@ -168,7 +214,7 @@ header .btn-action {
 .group-collapse-btn { cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px; transition: transform 0.2s ease; }
 .group-collapse-btn.collapsed { transform: rotate(-90deg); }
 
-/* --- 帳戶項目 (Account Item) 與馬卡龍圖示徽章 --- */
+/* 帳戶項目 (Account Item) */
 .account-item {
   display: flex; justify-content: space-between; align-items: center;
   background: #FFFFFF;
@@ -179,15 +225,12 @@ header .btn-action {
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.account-item:active {
-  background: #F8F9FA;
-}
+.account-item:active { background: #F8F9FA; }
 .account-item:hover, .account-item.active { background: #FFFFFF; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
 .account-info { display: flex; flex-direction: column; gap: 2px; }
 .account-name { font-size: 13.5px; font-weight: 600; }
 .account-balance { font-size: 13px; font-weight: 700; }
 
-/* 馬卡龍 Icon Badge 基礎樣式 */
 .account-icon-badge {
   width: 36px;
   height: 36px;
@@ -200,13 +243,12 @@ header .btn-action {
   margin-right: 12px;
 }
 
-/* 根據帳戶類型自動套上柔和馬卡龍底色 */
-.badge-checking   { background-color: #E0F2F1; } /* 薄荷綠 */
-.badge-savings    { background-color: #E3F2FD; } /* 冰霧藍 */
-.badge-credit     { background-color: #FCE4EC; } /* 蜜桃粉 */
-.badge-investment { background-color: #F3E8FF; } /* 薰衣草紫 */
-.badge-cash       { background-color: #FFF8E1; } /* 暖杏黃 */
-.badge-crypto     { background-color: #FFF3E0; } /* 蜜桔橙 */
+.badge-checking   { background-color: #E0F2F1; }
+.badge-savings    { background-color: #E3F2FD; }
+.badge-credit     { background-color: #FCE4EC; }
+.badge-investment { background-color: #F3E8FF; }
+.badge-cash       { background-color: #FFF8E1; }
+.badge-crypto     { background-color: #FFF3E0; }
 .badge-default    { background-color: #F5F5F7; }
 
 .main-detail { flex: 1; background: var(--card-bg); overflow-y: auto; display: flex; flex-direction: column; position: relative; scroll-behavior: smooth; }
@@ -225,7 +267,6 @@ header .btn-action {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
 
-/* 返回、記帳與帳戶編輯按鈕樣式 */
 .btn-back { 
   display: none; 
   background: none; 
@@ -293,7 +334,6 @@ header .btn-action {
 .tx-sub-cat { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
 .tx-cat-chip { background: rgba(0,0,0,0.04); padding: 1px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; }
 
-/* 右側金額與幣種同一行對齊（禁止折行） */
 .tx-amt { 
   font-size: 13.5px; 
   font-weight: 700; 
@@ -360,7 +400,7 @@ header .btn-action {
 }
 .back-to-top-btn:hover { transform: translateY(-3px); }
 
-/* --- 底部 iOS 毛玻璃 Tab Bar --- */
+/* 底部 iOS 毛玻璃 Tab Bar */
 .ios-tab-bar {
   position: fixed;
   bottom: 0;
@@ -412,7 +452,6 @@ header .btn-action {
   background: #E5F2FF;
 }
 
-/* 電腦版自動隱藏 Tab Bar（維持原汁原味 Split View 雙欄） */
 @media (min-width: 769px) {
   .ios-tab-bar {
     display: none;
@@ -433,12 +472,10 @@ header .btn-action {
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
 
-/* 基礎 Input 樣式 */
 .form-group input {
   padding: 9px 11px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13.5px; background: #FAF9F6; outline: none;
 }
 
-/* 下拉選單 iOS 柔和圓角與極簡小箭頭 */
 select, 
 .form-group select, 
 .form-row-inline select {
@@ -468,7 +505,7 @@ select:focus,
 
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
 
-/* --- 內部借貸卡片 (Debt Contract Card) --- */
+/* 內部借貸卡片 */
 .debt-card {
   background: #FFFFFF;
   border: 1px solid var(--border-color);
@@ -507,7 +544,7 @@ select:focus,
   font-size: 14px;
 }
 
-/* 分類搜尋抽屜行項與觸發框 */
+/* 分類搜尋抽屜樣式：父分類 Header + 縮排子分類 */
 .category-picker-trigger {
   display: flex;
   justify-content: space-between;
@@ -519,20 +556,38 @@ select:focus,
   font-size: 13.5px;
   cursor: pointer;
 }
+
+.picker-cat-header {
+  padding: 8px 10px;
+  background: #F3F1EC;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 8px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .picker-cat-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 8px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
 }
+.picker-cat-row.child-indent {
+  margin-left: 12px;
+}
 .picker-cat-row:hover, .picker-cat-row:active {
-  background: #FAF8F5;
+  background: #F5F5F7;
 }
 
-/* 手機端專屬適配 */
+/* 手機端與明細全螢幕化適配 */
 @media (max-width: 768px) {
   .sidebar { 
     width: 100%; 
@@ -550,7 +605,11 @@ select:focus,
   body.mobile-view-detail .main-detail { display: flex; }
   body.mobile-view-detail .btn-back { display: inline-block; }
 
-  /* 頂部 Hero 卡片視覺升級：冰藍漸變卡片 */
+  /* 進入明細頁時自動隱藏頂部 Hero Net Worth Header */
+  body.mobile-view-detail header {
+    display: none !important;
+  }
+
   .net-worth-box {
     background: linear-gradient(180deg, #D8ECFF 0%, #F4F9FF 100%);
     border-radius: 20px;
