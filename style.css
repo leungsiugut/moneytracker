@@ -174,12 +174,37 @@ body.hide-header header {
 }
 .sidebar-actions { display: flex; gap: 8px; }
 
-/* --- 純白 iOS Inset Group 卡片容器與項目排版 --- */
+/* --- 馬卡龍 Group 方塊 Badge (方案 A) --- */
+.group-macaron-badge {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-right: 10px;
+}
+
+.group-badge-pink   { background-color: var(--macaron-pink, #FAD2E1);   color: var(--macaron-pink-text, #9E3D60); }
+.group-badge-mint   { background-color: var(--macaron-mint, #D8F3DC);   color: var(--macaron-mint-text, #2D6A4F); }
+.group-badge-blue   { background-color: var(--macaron-blue, #D0E1FD);   color: var(--macaron-blue-text, #2B5C8F); }
+.group-badge-cream  { background-color: var(--macaron-cream, #FFF1C5);  color: var(--macaron-cream-text, #8A6D1F); }
+.group-badge-purple { background-color: var(--macaron-purple, #E2D4F0); color: var(--macaron-purple-text, #603D82); }
+.group-badge-grey   { background-color: var(--macaron-grey, #E5E7EB);   color: var(--macaron-grey-text, #4B5563); }
+
+/* --- 結餘色彩規格（全面對齊） --- */
+.bal-positive { color: #2D6A4F !important; font-weight: 700; }
+.bal-negative { color: #E5484D !important; font-weight: 700; }
+.bal-zero     { color: #8E8E93 !important; font-weight: 600; }
+
+/* 純白 iOS Inset Group 卡片容器 */
 .ios-group-card {
   background: #FFFFFF;
   border-radius: 18px;
-  padding: 8px 16px;
-  margin-bottom: 14px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
   border: 1px solid rgba(0, 0, 0, 0.04);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
@@ -188,62 +213,21 @@ body.hide-header header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0 6px 0;
-  border-bottom: 0.5px solid #F0F1F5;
   cursor: pointer;
   user-select: none;
-}
-.group-header-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #8E8E93;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.group-header-sum {
-  font-size: 13px;
-  font-weight: 600;
-  color: #8E8E93;
 }
 
 .acc-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 0.5px solid #F2F2F7;
+  padding: 12px 4px 12px 28px;
   cursor: pointer;
+  border-bottom: 0.5px solid #F2F2F7;
 }
 .acc-item-row:last-child {
   border-bottom: none;
 }
-
-/* 馬卡龍色系 Icon Badge (36x36 圓角小方框) */
-.acc-macaron-badge {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  margin-right: 12px;
-}
-.badge-checking   { background-color: #E0F2F1; }
-.badge-savings    { background-color: #E3F2FD; }
-.badge-credit     { background-color: #FCE4EC; }
-.badge-investment { background-color: #F3E8FF; }
-.badge-cash       { background-color: #FFF8E1; }
-.badge-crypto     { background-color: #FFF3E0; }
-.badge-default    { background-color: #F5F5F7; }
-
-/* 餘額正負顏色 */
-.bal-positive { color: #1C1C1E; font-weight: 700; }
-.bal-negative { color: #E5484D !important; font-weight: 700; }
 
 .main-detail { flex: 1; background: var(--card-bg); overflow-y: auto; display: flex; flex-direction: column; position: relative; scroll-behavior: smooth; }
 
