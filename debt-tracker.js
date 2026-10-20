@@ -1,6 +1,11 @@
 // 全域待還款陣列 (本地快取)
 let debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
 
+function cleanDateStr(d) {
+  if (!d) return '';
+  return String(d).split('T')[0];
+}
+
 // 計算特定交易的累計已還金額
 window.getTxRepaidAmount = function(txId) {
   debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
@@ -14,7 +19,7 @@ window.isPendingTx = function(t) {
   return t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
 };
 
-// 渲染內部借貸專屬視圖
+// 模組 2：借貸看板卡片細化與日期清洗
 window.renderDebtTrackerView = function() {
   const container = document.getElementById('debt-cards-container');
   const summaryBadge = document.getElementById('debt-summary-badge');
@@ -22,11 +27,10 @@ window.renderDebtTrackerView = function() {
 
   container.innerHTML = '';
   const pendingTxs = transactions.filter(window.isPendingTx);
-
   let totalRemaining = 0;
 
   if (pendingTxs.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">🎉 太棒了！目前沒有任何待還借貸項目。</p>';
+    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">🎉 目前沒有任何待還借貸項目。</p>';
     if (summaryBadge) summaryBadge.innerText = '待還總額: $0.00';
     return;
   }
@@ -36,6 +40,7 @@ window.renderDebtTrackerView = function() {
     const repaidAmt = getTxRepaidAmount(tx.id);
     const remainAmt = Math.max(0, origAmt - repaidAmt);
     const acc = accounts.find(a => a.id === tx.accountId);
+    const accName = acc ? acc.name : '未知帳戶';
     const cur = acc ? acc.currency : 'CAD';
 
     totalRemaining += convertAmount(remainAmt, cur, baseCurrency);
@@ -43,18 +48,25 @@ window.renderDebtTrackerView = function() {
     const card = document.createElement('div');
     card.className = 'debt-card';
     card.innerHTML = `
-      <div class="debt-card-header">
+      <div class="debt-card-header" style="margin-bottom: 4px;">
         <span class="debt-card-title">${tx.title || '借貸項目'}</span>
-        <span class="debt-card-date">${tx.date}</span>
+        <span class="debt-card-date">${cleanDateStr(tx.date)}</span>
       </div>
-      <div class="debt-stats-row">
-        <div>原額: <b>${fmtCur(origAmt, cur)}</b></div>
-        <div>已還: <b>${fmtCur(repaidAmt, cur)}</b></div>
-        <div>剩餘: <span class="debt-stat-val remain">${fmtCur(remainAmt, cur)}</span></div>
+      <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
+        所屬帳戶: ${accName} (${cur})
+      </div>
+      <div class="debt-stats-container" style="border-top:1px dashed var(--border-color); border-bottom:1px dashed var(--border-color); padding: 8px 0; margin-bottom: 12px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="display:flex; justify-content:space-between;">
+          <span>原額: <b>${fmtCur(origAmt, cur)}</b></span>
+          <span>剩餘: <span class="debt-stat-val remain" style="color:#D95D5D; font-weight:800;">${fmtCur(remainAmt, cur)}</span></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; color: #2D6A4F;">
+          <span>已還款: <b>${fmtCur(repaidAmt, cur)}</b></span>
+        </div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px;">
         <button class="btn-action btn-secondary" onclick="openRepayLogModal('${tx.id}')">查看記錄</button>
-        <button class="btn-action" onclick="openQuickRepayModal('${tx.id}', ${remainAmt})">快速還款</button>
+        <button class="btn-action" onclick="openQuickRepayModal('${tx.id}')">快速還款</button>
       </div>
     `;
     container.appendChild(card);
@@ -65,18 +77,40 @@ window.renderDebtTrackerView = function() {
   }
 };
 
-// 打開快速還款 Modal：金額預設清空
-window.openQuickRepayModal = function(txId, remainAmt) {
+// 模組 3：還款記錄支援完整彈窗編輯（金額、日期、備註）
+window.openQuickRepayModal = function(txId, editRepayId = null) {
   document.getElementById('repay-target-tx-id').value = txId;
-  document.getElementById('repay-amount').value = ''; // 👈 清空，不預先填寫金額
-  document.getElementById('repay-note').value = '';
-  document.getElementById('repay-date').value = new Date().toISOString().split('T')[0];
+  let editingIdInput = document.getElementById('repay-edit-id');
+  if (!editingIdInput) {
+    editingIdInput = document.createElement('input');
+    editingIdInput.type = 'hidden';
+    editingIdInput.id = 'repay-edit-id';
+    document.getElementById('quick-repay-modal').querySelector('.modal-body').appendChild(editingIdInput);
+  }
+
+  if (editRepayId) {
+    debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+    const record = debtRepayments.find(r => r.id === editRepayId);
+    if (!record) return;
+    editingIdInput.value = editRepayId;
+    document.getElementById('repay-amount').value = record.amount;
+    document.getElementById('repay-note').value = record.note || '';
+    document.getElementById('repay-date').value = cleanDateStr(record.date);
+    document.querySelector('#quick-repay-modal .modal-header span').innerText = '編輯還款記錄';
+  } else {
+    editingIdInput.value = '';
+    document.getElementById('repay-amount').value = '';
+    document.getElementById('repay-note').value = '';
+    document.getElementById('repay-date').value = new Date().toISOString().split('T')[0];
+    document.querySelector('#quick-repay-modal .modal-header span').innerText = '記錄還款';
+  }
+
   openModal('quick-repay-modal');
 };
 
-// 儲存快速還款紀錄
 window.saveQuickRepayment = function() {
   const txId = document.getElementById('repay-target-tx-id').value;
+  const editId = document.getElementById('repay-edit-id') ? document.getElementById('repay-edit-id').value : '';
   const amount = parseFloat(document.getElementById('repay-amount').value);
   const note = document.getElementById('repay-note').value.trim() || '分期還款';
   const date = document.getElementById('repay-date').value || new Date().toISOString().split('T')[0];
@@ -86,35 +120,47 @@ window.saveQuickRepayment = function() {
     return;
   }
 
-  const newRepayment = {
-    id: 'rep-' + Date.now(),
-    txId,
-    date,
-    amount,
-    note
-  };
-
   debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
-  debtRepayments.push(newRepayment);
+
+  if (editId) {
+    const idx = debtRepayments.findIndex(r => r.id === editId);
+    if (idx !== -1) {
+      debtRepayments[idx] = { ...debtRepayments[idx], amount, note, date };
+    }
+  } else {
+    debtRepayments.push({
+      id: 'rep-' + Date.now(),
+      txId,
+      date,
+      amount,
+      note
+    });
+  }
+
   localStorage.setItem('wiz_debt_repayments', JSON.stringify(debtRepayments));
 
-  // 檢查是否已全數還清
   const tx = transactions.find(t => t.id === txId);
   if (tx) {
     const totalRepaid = getTxRepaidAmount(txId);
     if (totalRepaid >= parseFloat(tx.amount)) {
-      if (confirm('🎉 呢筆大數已全數還清！是否取消該筆交易的 Pending 標記？')) {
+      if (confirm('🎉 此筆大數已全數還清！是否取消該筆交易的 Pending 標記？')) {
         tx.isPending = false;
       }
+    } else {
+      tx.isPending = true;
     }
   }
 
   closeModal('quick-repay-modal');
   saveData();
   renderDebtTrackerView();
+  
+  const repayLogModal = document.getElementById('repay-log-modal');
+  if (repayLogModal && repayLogModal.classList.contains('open')) {
+    openRepayLogModal(txId);
+  }
 };
 
-// 打開還款歷史明細 Modal（支援編輯與刪除）
 window.openRepayLogModal = function(txId) {
   const container = document.getElementById('repay-log-list');
   if (!container) return;
@@ -132,7 +178,7 @@ window.openRepayLogModal = function(txId) {
       row.innerHTML = `
         <div>
           <div style="font-weight:600;">${log.note || '分期還款'}</div>
-          <div style="font-size:11px; color:var(--text-muted);">${log.date}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${cleanDateStr(log.date)}</div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-weight:700; color:#2D6A4F;">+$${parseFloat(log.amount).toFixed(2)}</span>
@@ -147,7 +193,13 @@ window.openRepayLogModal = function(txId) {
   openModal('repay-log-modal');
 };
 
-// 刪除還款單筆記錄
+window.editRepayRecord = function(repayId) {
+  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+  const record = debtRepayments.find(r => r.id === repayId);
+  if (!record) return;
+  openQuickRepayModal(record.txId, repayId);
+};
+
 window.deleteRepayRecord = function(repayId, txId) {
   if (!confirm('確定刪除這筆還款記錄？')) return;
   debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
@@ -161,28 +213,5 @@ window.deleteRepayRecord = function(repayId, txId) {
 
   saveData();
   openRepayLogModal(txId);
-  renderDebtTrackerView();
-};
-
-// 編輯還款單筆記錄
-window.editRepayRecord = function(repayId) {
-  debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
-  const record = debtRepayments.find(r => r.id === repayId);
-  if (!record) return;
-
-  const newAmt = prompt('請輸入修改後的還款金額：', record.amount);
-  if (newAmt === null) return;
-  const parsedAmt = parseFloat(newAmt);
-  if (isNaN(parsedAmt) || parsedAmt <= 0) {
-    alert('請輸入有效金額！');
-    return;
-  }
-  const newNote = prompt('請輸入備註：', record.note || '');
-  record.amount = parsedAmt;
-  if (newNote !== null) record.note = newNote.trim();
-
-  localStorage.setItem('wiz_debt_repayments', JSON.stringify(debtRepayments));
-  saveData();
-  openRepayLogModal(record.txId);
   renderDebtTrackerView();
 };

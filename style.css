@@ -89,7 +89,7 @@ body.hide-header header {
   white-space: nowrap;
 }
 
-/* 頂部右側手動同步微標籤按鈕 */
+/* 頂部右側手動同步按鈕 */
 .sync-status {
   font-size: 12px;
   font-weight: 600;
@@ -174,64 +174,76 @@ body.hide-header header {
 }
 .sidebar-actions { display: flex; gap: 8px; }
 
-/* 帳戶分組 (Group Card) */
-.group-card {
-  background: #FFFFFF !important;
-  border-radius: 18px;
-  padding: 14px 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-}
-.group-header {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 0.5px solid #F2F2F7;
-  padding-bottom: 10px;
-  margin-bottom: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  color: #1C1C1E;
-}
-.group-title-area { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
-.group-collapse-btn { cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px; transition: transform 0.2s ease; }
-.group-collapse-btn.collapsed { transform: rotate(-90deg); }
-
-/* 帳戶項目 (Account Item) */
-.account-item {
-  display: flex; justify-content: space-between; align-items: center;
+/* --- 純白 iOS Inset Group 卡片容器與項目排版 --- */
+.ios-group-card {
   background: #FFFFFF;
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border: 0.5px solid transparent;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  border-radius: 18px;
+  padding: 8px 16px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
-.account-item:active { background: #F8F9FA; }
-.account-item:hover, .account-item.active { background: #FFFFFF; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.05); }
-.account-info { display: flex; flex-direction: column; gap: 2px; }
-.account-name { font-size: 13.5px; font-weight: 600; }
-.account-balance { font-size: 13px; font-weight: 700; }
 
-/* 馬卡龍色系 Badge 樣式 */
-.account-icon-badge {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  border-radius: 12px;
+.group-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 6px 0;
+  border-bottom: 0.5px solid #F0F1F5;
+  cursor: pointer;
+  user-select: none;
+}
+.group-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8E8E93;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.group-header-sum {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8E8E93;
+}
+
+.acc-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 0.5px solid #F2F2F7;
+  cursor: pointer;
+}
+.acc-item-row:last-child {
+  border-bottom: none;
+}
+
+/* 馬卡龍色系 Icon Badge (36x36 圓角小方框) */
+.acc-macaron-badge {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 17px;
   margin-right: 12px;
 }
+.badge-checking   { background-color: #E0F2F1; }
+.badge-savings    { background-color: #E3F2FD; }
+.badge-credit     { background-color: #FCE4EC; }
+.badge-investment { background-color: #F3E8FF; }
+.badge-cash       { background-color: #FFF8E1; }
+.badge-crypto     { background-color: #FFF3E0; }
+.badge-default    { background-color: #F5F5F7; }
 
-.badge-checking   { background-color: #E0F2F1; color: #2D6A4F; }
-.badge-savings    { background-color: #E3F2FD; color: #2B5C8F; }
-.badge-credit     { background-color: #FCE4EC; color: #9E3D60; }
-.badge-investment { background-color: #F3E8FF; color: #603D82; }
-.badge-cash       { background-color: #FFF8E1; color: #8A6D1F; }
-.badge-crypto     { background-color: #FFF3E0; color: #D95D5D; }
-.badge-default    { background-color: #F5F5F7; color: #4B5563; }
+/* 餘額正負顏色 */
+.bal-positive { color: #1C1C1E; font-weight: 700; }
+.bal-negative { color: #E5484D !important; font-weight: 700; }
 
 .main-detail { flex: 1; background: var(--card-bg); overflow-y: auto; display: flex; flex-direction: column; position: relative; scroll-behavior: smooth; }
 
@@ -487,7 +499,7 @@ select:focus,
 
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
 
-/* 內部借貸卡片 */
+/* 內部借貸卡片樣式 */
 .debt-card {
   background: #FFFFFF;
   border: 1px solid var(--border-color);
@@ -511,22 +523,13 @@ select:focus,
   font-size: 11px;
   color: var(--text-muted);
 }
-.debt-stats-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 12.5px;
-  border-top: 1px dashed var(--border-color);
-  border-bottom: 1px dashed var(--border-color);
-  margin-bottom: 10px;
-}
 .debt-stat-val.remain {
   color: #D95D5D;
   font-weight: 800;
   font-size: 14px;
 }
 
-/* 分類搜尋抽屜 */
+/* 分類搜尋抽屜樣式 */
 .category-picker-trigger {
   display: flex;
   justify-content: space-between;

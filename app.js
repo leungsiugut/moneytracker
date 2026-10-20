@@ -226,7 +226,6 @@ window.setSyncStatus = function(state, msg) {
   }
 };
 
-// 雲端同步：納入 debtRepayments 雙向讀寫
 window.pushToGoogleSheet = async function() {
   if (!SCRIPT_URL) return;
   setSyncStatus('syncing', '正在儲存...');
@@ -276,7 +275,6 @@ window.pullFromGoogleSheet = async function() {
   }
 };
 
-// 手動同步觸發按鈕
 window.manualSyncTrigger = function() {
   if (!SCRIPT_URL) {
     switchMainTab('settings');
@@ -544,7 +542,7 @@ function processMoneyWizCSVNative(grid) {
   }
 }
 
-// 截圖 OCR 辨識：完成後自動打開獨立交易全螢幕 Form
+// 截圖 OCR 辨識
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -810,7 +808,75 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 渲染主畫面：恢復 Group 自選 Icon 與各帳戶馬卡龍 Badge
+// 模組 1：重寫 renderAccountsView（純白 Inset Group 卡片、馬卡龍 Badge 與負數紅字）
+window.renderAccountsView = function() {
+  const container = document.getElementById('sidebar-accounts');
+  if (!container) return;
+  container.innerHTML = '';
+
+  groups.forEach(grp => {
+    const grpAccounts = accounts.filter(a => a.groupId === grp.id);
+    let grpTotal = 0;
+    grpAccounts.forEach(acc => {
+      const b = getAccountCashBalance(acc.id);
+      grpTotal += convertAmount(b, acc.currency, grp.currency || baseCurrency);
+    });
+
+    const isCollapsed = collapsedGroups[grp.id] || false;
+    const groupCard = document.createElement('div');
+    groupCard.className = 'ios-group-card';
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'group-header-row';
+    headerRow.innerHTML = `
+      <div class="group-header-title" onclick="toggleGroupCollapse('${grp.id}')">
+        <span style="font-size:10px; color:#8E8E93;">${isCollapsed ? '▶' : '▼'}</span>
+        <span>${grp.name}</span>
+      </div>
+      <div class="group-header-sum">
+        <span class="${grpTotal < 0 ? 'bal-negative' : ''}">${fmtCur(grpTotal, grp.currency || baseCurrency)}</span>
+        <button type="button" style="background:none; border:none; color:#C7C7CC; cursor:pointer; margin-left:4px;" onclick="event.stopPropagation(); openEditGroupModal('${grp.id}')">✏️</button>
+      </div>
+    `;
+    groupCard.appendChild(headerRow);
+
+    const accList = document.createElement('div');
+    accList.style.display = isCollapsed ? 'none' : 'block';
+
+    if (grpAccounts.length === 0) {
+      accList.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">此分組尚無帳戶</div>';
+    } else {
+      grpAccounts.forEach(acc => {
+        const bal = getAccountCashBalance(acc.id);
+        const badgeClass = getAccountTypeBadgeClass(acc.type);
+        const icon = getAccountTypeIcon(acc.type);
+        const isNeg = bal < 0;
+
+        const row = document.createElement('div');
+        row.className = 'acc-item-row';
+        row.onclick = () => selectAccount(acc.id);
+        row.innerHTML = `
+          <div style="display:flex; align-items:center;">
+            <div class="acc-macaron-badge ${badgeClass}">${icon}</div>
+            <div>
+              <div style="font-size:15px; font-weight:600; color:#1C1C1E;">${acc.name}</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span class="${isNeg ? 'bal-negative' : 'bal-positive'}">${fmtCur(bal, acc.currency)}</span>
+            <span style="font-size:11px; font-weight:600; color:#8E8E93;">${acc.currency}</span>
+            <span style="color:#C7C7CC; font-size:14px; margin-left:2px;">›</span>
+          </div>
+        `;
+        accList.appendChild(row);
+      });
+    }
+
+    groupCard.appendChild(accList);
+    container.appendChild(groupCard);
+  });
+};
+
 window.renderApp = function() {
   let totalNetWorthInBase = 0;
   accounts.forEach(acc => {
@@ -823,61 +889,7 @@ window.renderApp = function() {
   if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency} 📈)`;
   if (amtEl) amtEl.innerText = `$${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const sidebar = document.getElementById('sidebar-accounts');
-  if (!sidebar) return;
-  sidebar.innerHTML = '';
-
-  groups.forEach(grp => {
-    const grpCur = grp.currency || 'CAD';
-    const groupAccs = accounts.filter(a => a.groupId === grp.id);
-
-    const groupBalanceInGrpCur = groupAccs.reduce((sum, a) => {
-      const val = getAccountTotalValue(a.id);
-      return sum + convertAmount(val, a.currency || 'CAD', grpCur);
-    }, 0);
-
-    const isCollapsed = !!collapsedGroups[grp.id];
-    const groupIcon = grp.icon || '📁';
-
-    const card = document.createElement('div');
-    card.className = `group-card group-${grp.theme || 'mint'}`;
-    card.innerHTML = `
-      <div class="group-header">
-        <div class="group-title-area" onclick="toggleGroupCollapse('${grp.id}')">
-          <span class="group-collapse-btn ${isCollapsed ? 'collapsed' : ''}">▼</span>
-          <span>${groupIcon} ${grp.name}</span>
-          <span style="font-size: 11px; opacity: 0.6;" onclick="event.stopPropagation(); openEditGroupModal('${grp.id}')" title="設定分組">✎</span>
-        </div>
-        <span>${fmtCur(groupBalanceInGrpCur, grpCur)}</span>
-      </div>
-      <div class="group-accounts" style="display: ${isCollapsed ? 'none' : 'block'};"></div>
-    `;
-
-    const listContainer = card.querySelector('.group-accounts');
-    groupAccs.forEach(acc => {
-      const accVal = getAccountTotalValue(acc.id);
-      const icon = getAccountTypeIcon(acc.type);
-      const badgeClass = getAccountTypeBadgeClass(acc.type);
-      const item = document.createElement('div');
-      item.className = `account-item ${acc.id === currentAccountId ? 'active' : ''}`;
-      item.onclick = () => selectAccount(acc.id);
-      
-      item.innerHTML = `
-        <div style="display: flex; align-items: center;">
-          <div class="account-icon-badge ${badgeClass}">${icon}</div>
-          <div class="account-info">
-            <span class="account-name">${acc.name}</span>
-            <span style="font-size: 11px; color: var(--text-muted);">${acc.currency}</span>
-          </div>
-        </div>
-        <span class="account-balance">${fmtCur(accVal, acc.currency)}</span>
-      `;
-      listContainer.appendChild(item);
-    });
-
-    sidebar.appendChild(card);
-  });
-
+  window.renderAccountsView();
   renderDetailView();
   if (window.renderDebtTrackerView) window.renderDebtTrackerView();
   renderCategoryTree();
@@ -916,7 +928,6 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-// 切換三大主 View
 window.switchMainTab = function(tab) {
   currentMainTab = tab;
   document.querySelectorAll('.ios-tab-bar .tab-item').forEach(el => el.classList.remove('active'));
@@ -958,7 +969,6 @@ window.switchMainTab = function(tab) {
   }
 };
 
-// 交易全螢幕 Full Page 切換控制器
 window.openTxPage = function(txId = null) {
   previousActiveTab = currentMainTab || 'accounts';
   
@@ -2276,7 +2286,7 @@ window.deleteCurrentGroup = function() {
   saveData();
 };
 
-// 初始化
+// 初始化執行保護
 try {
   if (typeof initCurrencyDropdowns === 'function') initCurrencyDropdowns();
   if (typeof updateFXRates === 'function') updateFXRates(typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');
