@@ -19,14 +19,19 @@ window.isPendingTx = function(t) {
   return t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
 };
 
-// 模組 2：借貸看板卡片細化與日期清洗
+// 模組 3：借貸看板卡片排版、日期排序（由新至舊）與文字簡化
 window.renderDebtTrackerView = function() {
   const container = document.getElementById('debt-cards-container');
   const summaryBadge = document.getElementById('debt-summary-badge');
   if (!container) return;
 
   container.innerHTML = '';
-  const pendingTxs = transactions.filter(window.isPendingTx);
+  
+  // 撈出 Pending 交易並按日期倒序排列 (愈新在愈頂)
+  const pendingTxs = transactions
+    .filter(window.isPendingTx)
+    .sort((a, b) => new Date(cleanDateStr(b.date)) - new Date(cleanDateStr(a.date)));
+
   let totalRemaining = 0;
 
   if (pendingTxs.length === 0) {
@@ -52,8 +57,9 @@ window.renderDebtTrackerView = function() {
         <span class="debt-card-title">${tx.title || '借貸項目'}</span>
         <span class="debt-card-date">${cleanDateStr(tx.date)}</span>
       </div>
+      <!-- 直接顯示來源帳戶與幣種，拔除「所屬帳戶:」字眼 -->
       <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
-        所屬帳戶: ${accName} (${cur})
+        ${accName} (${cur})
       </div>
       <div class="debt-stats-container" style="border-top:1px dashed var(--border-color); border-bottom:1px dashed var(--border-color); padding: 8px 0; margin-bottom: 12px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px;">
         <div style="display:flex; justify-content:space-between;">
@@ -77,7 +83,7 @@ window.renderDebtTrackerView = function() {
   }
 };
 
-// 模組 3：還款記錄支援完整彈窗編輯（金額、日期、備註）
+// 支援完整彈窗編輯（金額、日期、備註）
 window.openQuickRepayModal = function(txId, editRepayId = null) {
   document.getElementById('repay-target-tx-id').value = txId;
   let editingIdInput = document.getElementById('repay-edit-id');
@@ -167,7 +173,7 @@ window.openRepayLogModal = function(txId) {
   container.innerHTML = '';
 
   debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
-  const logs = debtRepayments.filter(r => r.txId === txId).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const logs = debtRepayments.filter(r => r.txId === txId).sort((a, b) => new Date(cleanDateStr(b.date)) - new Date(cleanDateStr(a.date)));
 
   if (logs.length === 0) {
     container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 20px 0;">尚無任何還款記錄</p>';

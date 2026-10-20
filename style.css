@@ -110,6 +110,47 @@ body.hide-header header {
 .sync-status.syncing { color: #8A6D1F; background: #FFF9E6; border-color: #FFE082; }
 .sync-status.error { color: #D95D5D; background: #FFEBEE; border-color: #FFCDD2; }
 
+/* 電腦版選單樣式 */
+@media (max-width: 768px) {
+  .desktop-menu-container {
+    display: none !important;
+  }
+}
+
+.desktop-dropdown-menu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  padding: 6px;
+  min-width: 140px;
+  z-index: 1005;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.desktop-dropdown-menu button {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #1C1C1E);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.desktop-dropdown-menu button:hover {
+  background: #F2F2F7;
+}
+
 .app-main-viewport {
   flex: 1;
   display: flex;
@@ -194,7 +235,7 @@ body.hide-header header {
 .group-badge-purple { background-color: var(--macaron-purple, #E2D4F0); color: var(--macaron-purple-text, #603D82); }
 .group-badge-grey   { background-color: var(--macaron-grey, #E5E7EB);   color: var(--macaron-grey-text, #4B5563); }
 
-/* --- 結餘色彩規格（全面對齊） --- */
+/* --- 結餘色彩規格（正綠、負紅、零元灰） --- */
 .bal-positive { color: #2D6A4F !important; font-weight: 700; }
 .bal-negative { color: #E5484D !important; font-weight: 700; }
 .bal-zero     { color: #8E8E93 !important; font-weight: 600; }
@@ -482,6 +523,14 @@ select:focus,
 }
 
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* 彈窗層級修復：確保快速還款/編輯彈窗層級高於歷史記錄彈窗 */
+#quick-repay-modal {
+  z-index: 1200 !important;
+}
+#repay-log-modal {
+  z-index: 1100 !important;
+}
 
 /* 內部借貸卡片樣式 */
 .debt-card {

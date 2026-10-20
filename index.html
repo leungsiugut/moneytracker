@@ -25,7 +25,7 @@
 </head>
 <body>
 
-  <!-- 全域頂部 Header：右側置入手動同步鈕 -->
+  <!-- 全域頂部 Header：支援電腦版漢堡選單與手動同步鈕 -->
   <header id="app-global-header">
     <div class="header-left">
       <div class="net-worth-box" onclick="switchMainTab('accounts'); openReportModal();" title="點擊檢視資產走勢">
@@ -37,6 +37,16 @@
       <button class="sync-status" id="btn-manual-sync" type="button" onclick="manualSyncTrigger()" title="點擊連線並同步 Google Sheet">
         <span id="sync-icon">☁️</span> <span id="sync-text">已同步</span>
       </button>
+
+      <!-- 電腦版快速導覽漢堡選單 (手機端自動隱藏) -->
+      <div class="desktop-menu-container" style="position: relative; display: inline-block;">
+        <button id="btn-desktop-menu" type="button" class="btn-action btn-secondary" onclick="toggleDesktopMenu()" style="width: 36px; height: 36px; padding: 0; font-size: 16px;">☰</button>
+        <div id="desktop-nav-dropdown" class="desktop-dropdown-menu" style="display: none;">
+          <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">🪪 戶口主頁</button>
+          <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">🚩 內部借貸</button>
+          <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">⚙️ 系統設定</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -149,7 +159,7 @@
       </div>
     </div>
 
-    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View（升級替換 tx-modal） -->
+    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View -->
     <div id="view-tx-form" class="main-page-view" style="display: none; background: var(--card-bg);">
       <div class="page-view-header">
         <button class="btn-back" type="button" onclick="closeTxPage()" style="display: inline-block;">‹ 取消</button>
@@ -166,7 +176,6 @@
           <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為待還款（內部借貸合約）</label>
         </div>
 
-        <!-- 帳戶轉出/單帳戶列 -->
         <div id="f-group-from-container">
           <div class="form-group" id="f-group-single-acc">
             <label id="label-from-acc">帳戶</label>
@@ -177,7 +186,6 @@
           </div>
         </div>
 
-        <!-- 帳戶轉入列 (Transfer / Exchange) -->
         <div id="f-group-target-container" style="display: none;">
           <div class="form-group">
             <label>轉入戶口</label>
@@ -360,7 +368,7 @@
     </div>
   </div>
 
-  <!-- Modal：Group 管理 -->
+  <!-- Modal：Group 管理（已加入「自選 Emoji」輸入框） -->
   <div class="modal-overlay" id="group-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -370,6 +378,12 @@
       <div class="modal-body">
         <input type="hidden" id="group-id">
         <input type="hidden" id="group-theme" value="pink">
+        
+        <div class="form-group">
+          <label>自選圖示 (Emoji)</label>
+          <input type="text" id="group-icon" placeholder="例如：🏦、💳、📈、📁" maxlength="4" style="font-size: 18px;">
+        </div>
+
         <div class="form-group">
           <label>分組名稱</label>
           <input type="text" id="group-name" placeholder="例如：Everyday Banking">
@@ -407,7 +421,7 @@
     </div>
   </div>
 
-  <!-- Modal：快速還款 Modal -->
+  <!-- Modal：快速還款/編輯還款 Modal -->
   <div class="modal-overlay" id="quick-repay-modal">
     <div class="modal-card" style="max-width: 360px;">
       <div class="modal-header">
@@ -416,12 +430,13 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="repay-target-tx-id">
+        <input type="hidden" id="repay-edit-id">
         <div class="form-group">
           <label>還款金額</label>
           <input type="number" step="0.01" id="repay-amount" placeholder="0.00">
         </div>
         <div class="form-group">
-          <label>備註 / 糧期說明</label>
+          <label>備註 / 說明</label>
           <input type="text" id="repay-note" placeholder="例如：10月尾糧分期">
         </div>
         <div class="form-group">
@@ -431,12 +446,12 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-action btn-secondary" onclick="closeModal('quick-repay-modal')">取消</button>
-        <button type="button" class="btn-action" onclick="saveQuickRepayment()">確認還款</button>
+        <button type="button" class="btn-action" onclick="saveQuickRepayment()">確認儲存</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal：還款歷史記錄 Modal（支援編輯與刪除） -->
+  <!-- Modal：還款歷史記錄 Modal -->
   <div class="modal-overlay" id="repay-log-modal">
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
