@@ -82,6 +82,29 @@ let searchKeyword = '';
 let chartInstance = null;
 
 // =======================
+// 編輯模式狀態管理 (Edit Mode)
+// =======================
+window.isEditMode = false;
+window.toggleEditMode = function() {
+  window.isEditMode = !window.isEditMode;
+  const btn = document.getElementById('btn-toggle-edit-mode');
+  const txt = document.getElementById('txt-edit-mode');
+  
+  if (btn && txt) {
+    if (window.isEditMode) {
+      btn.classList.add('active-edit-mode');
+      btn.querySelector('.btn-icon').innerText = '✓';
+      txt.innerText = '完成';
+    } else {
+      btn.classList.remove('active-edit-mode');
+      btn.querySelector('.btn-icon').innerText = '✏️';
+      txt.innerText = '編輯';
+    }
+  }
+  renderAccountsView();
+};
+
+// =======================
 // 待同步佇列 (Pending Outbox)
 // =======================
 function getPendingUploads() {
@@ -102,7 +125,6 @@ function clearPendingUploads() {
   updateSyncStatusUI();
 }
 
-// 根據同步狀態更新頂部 UI 指示燈
 function updateSyncStatusUI(customState = null, msg = null) {
   const btn = document.getElementById('btn-manual-sync');
   const icon = document.getElementById('sync-icon');
@@ -323,7 +345,6 @@ window.pullFromGoogleSheet = async function() {
     localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
   }
 
-  // 👈 接收 StockPrices 表並更新 stockPriceCache（非正數或 N/A 則保留原值/fallback）
   if (data.stockPrices && Array.isArray(data.stockPrices)) {
     data.stockPrices.forEach(row => {
       const sym = (row.symbol || '').toString().trim().toUpperCase();
@@ -343,7 +364,6 @@ window.pullFromGoogleSheet = async function() {
   return true;
 };
 
-// 手動同步觸發入口（先 Push 後 Pull，斷線嚴禁覆蓋）
 window.manualSyncTrigger = async function() {
   if (!SCRIPT_URL) {
     alert('請先在設定頁面填入 Google Apps Script URL！');
@@ -354,18 +374,14 @@ window.manualSyncTrigger = async function() {
   updateSyncStatusUI('syncing', '正在同步...');
 
   try {
-    // 步驟 1：若本機有未同步資料，必須先 Push 上雲端
     const pendingList = getPendingUploads();
     if (pendingList.length > 0 || window.hasLocalChanges) {
       const pushSuccess = await pushToGoogleSheet();
-      if (!pushSuccess) {
-        throw new Error('Push failed');
-      }
+      if (!pushSuccess) throw new Error('Push failed');
       clearPendingUploads();
       window.hasLocalChanges = false;
     }
 
-    // 步驟 2：Push 成功後，才安全執行 Pull 拉取最新資料
     await pullFromGoogleSheet();
     updateSyncStatusUI();
   } catch (err) {
@@ -376,7 +392,6 @@ window.manualSyncTrigger = async function() {
   }
 };
 
-// 儲存交易時，若連線失敗自動進入 Pending 佇列
 async function handleAfterTxSave(txId) {
   window.hasLocalChanges = true;
   updateSyncStatusUI('syncing', '正在上傳...');
@@ -653,6 +668,19 @@ function processMoneyWizCSVNative(grid) {
   }
 }
 
+// 底部拍照按鈕喚起與處理
+window.triggerBottomCamera = function() {
+  const fileInput = document.getElementById('bottom-camera-input');
+  if (fileInput) fileInput.click();
+};
+
+window.handleBottomCameraUpload = async function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  await handleOCRImageSelected(event);
+  event.target.value = '';
+};
+
 // 截圖 OCR 辨識
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
@@ -725,7 +753,6 @@ window.handleOCRImageSelected = async function(event) {
   }
 };
 
-// 模組 3：拔除前端 Proxy 輪詢，改為讀取本機快取
 window.fetchQuote = function(symbol) {
   if (!symbol) return null;
   const querySym = symbol.trim().toUpperCase();
@@ -745,7 +772,6 @@ window.fetchQuoteForInput = function() {
   }
 };
 
-// 點擊「🔄 更新市價」邏輯與按鈕即時反饋
 window.refreshLiveStockPrices = async function() {
   const btn = document.getElementById('btn-refresh-prices') || event?.target;
   const originalText = btn ? btn.innerText : '🔄 更新市價';
@@ -758,7 +784,6 @@ window.refreshLiveStockPrices = async function() {
   }
 
   try {
-    // 觸發手動同步，由後端從 Google Sheet 的 StockPrices 分頁帶回最新價格
     await manualSyncTrigger();
     renderApp();
     alert('✅ 持倉市價已更新');
@@ -837,7 +862,6 @@ function getAccountCashBalance(accId) {
   return balance;
 }
 
-// 嚴格 Fallback 邏輯：stockPriceCache[sym] || avgCost（Crypto & 股票共用會計防崩潰）
 function getHoldings(accId) {
   const holdingsMap = {};
   const accTxs = transactions
@@ -874,7 +898,6 @@ function getHoldings(accId) {
   for (const [sym, data] of Object.entries(holdingsMap)) {
     if (data.shares > 0.0001) {
       const avgCost = data.shares > 0 ? (data.totalCost / data.shares) : 0;
-      // 👈 Crypto & 股票通用保底機制
       const currentPrice = stockPriceCache[sym] || avgCost;
       const marketValue = data.shares * currentPrice;
       const capitalGL = marketValue - data.totalCost;
@@ -911,7 +934,7 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 主頁帳戶分組渲染（市值復位 + 自選 Emoji + 乾淨排版）
+// 帳戶主頁分組渲染（支援編輯模式開關切換）
 window.renderAccountsView = function() {
   const container = document.getElementById('sidebar-accounts');
   if (!container) return;
@@ -935,30 +958,38 @@ window.renderAccountsView = function() {
     const balColorClass = getBalanceColorClass(grpTotal);
 
     const groupCard = document.createElement('div');
-    groupCard.className = 'ios-group-card';
+    groupCard.className = `ios-group-card ${window.isEditMode ? 'is-edit-mode' : ''}`;
 
     const headerRow = document.createElement('div');
     headerRow.className = 'group-header-row';
-    if (!isCollapsed) {
+    if (!isCollapsed && !window.isEditMode) {
       headerRow.style.paddingBottom = '10px';
       headerRow.style.borderBottom = '0.5px solid #F0F1F5';
     }
 
+    // 點擊事件分流：編輯模式下直接打開編輯彈窗；平時則切換折疊
+    headerRow.onclick = () => {
+      if (window.isEditMode) {
+        openEditGroupModal(grp.id);
+      } else {
+        toggleGroupCollapse(grp.id);
+      }
+    };
+
     headerRow.innerHTML = `
-      <div style="display:flex; align-items:center;" onclick="toggleGroupCollapse('${grp.id}')">
-        <span style="font-size:10px; color:#8E8E93; width:14px;">${isCollapsed ? '▶' : '▼'}</span>
+      <div style="display:flex; align-items:center;">
+        <span style="font-size:10px; color:#8E8E93; width:14px;">${window.isEditMode ? '✎' : (isCollapsed ? '▶' : '▼')}</span>
         <div class="group-macaron-badge ${badgeClass}">${grpIcon}</div>
         <div style="font-size:15px; font-weight:700; color:#1C1C1E;">${grp.name}</div>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span class="${balColorClass}" style="font-size:15px;">${fmtCur(grpTotal, grp.currency || baseCurrency)}</span>
-        <button type="button" style="background:none; border:none; color:#C7C7CC; cursor:pointer; font-size:12px; padding:4px;" onclick="event.stopPropagation(); openEditGroupModal('${grp.id}')">✏️</button>
       </div>
     `;
     groupCard.appendChild(headerRow);
 
     const accList = document.createElement('div');
-    accList.style.display = isCollapsed ? 'none' : 'block';
+    accList.style.display = (isCollapsed || window.isEditMode) ? 'none' : 'block';
 
     if (grpAccounts.length === 0) {
       accList.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">此分組尚無帳戶</div>';
@@ -970,7 +1001,10 @@ window.renderAccountsView = function() {
         const row = document.createElement('div');
         row.className = 'acc-item-row';
         if (idx === grpAccounts.length - 1) row.style.borderBottom = 'none';
-        row.onclick = () => selectAccount(acc.id);
+        row.onclick = (e) => {
+          e.stopPropagation();
+          selectAccount(acc.id);
+        };
 
         row.innerHTML = `
           <div>
@@ -1013,6 +1047,7 @@ window.renderApp = function() {
   window.renderAccountsView();
   renderDetailView();
   if (window.renderDebtTrackerView) window.renderDebtTrackerView();
+  if (currentMainTab === 'all-txs') renderAllTransactionsView();
   renderCategoryTree();
   updateSyncStatusUI();
 };
@@ -1044,37 +1079,42 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-window.switchMainTab = function(tab) {
-  currentMainTab = tab;
+// 切換主分頁（支援 🪪 戶口、🚩 借貸、🧾 全部、⚙️ 設定）
+window.switchMainTab = function(tabName) {
+  currentMainTab = tabName;
+
+  document.getElementById('view-accounts').style.display = 'none';
+  if (document.getElementById('view-debt-tracker')) document.getElementById('view-debt-tracker').style.display = 'none';
+  if (document.getElementById('view-all-txs')) document.getElementById('view-all-txs').style.display = 'none';
+  if (document.getElementById('view-settings')) document.getElementById('view-settings').style.display = 'none';
+  if (document.getElementById('view-tx-form')) document.getElementById('view-tx-form').style.display = 'none';
+
   document.querySelectorAll('.ios-tab-bar .tab-item').forEach(el => el.classList.remove('active'));
-  
-  const viewAccounts = document.getElementById('view-accounts');
-  const viewDebts = document.getElementById('view-debt-tracker');
-  const viewSettings = document.getElementById('view-settings');
-  const viewTxForm = document.getElementById('view-tx-form');
 
-  if (viewAccounts) viewAccounts.style.display = 'none';
-  if (viewDebts) viewDebts.style.display = 'none';
-  if (viewSettings) viewSettings.style.display = 'none';
-  if (viewTxForm) viewTxForm.style.display = 'none';
-
-  if (tab === 'accounts') {
-    const navAcc = document.getElementById('tab-nav-accounts');
-    if (navAcc) navAcc.classList.add('active');
-    if (viewAccounts) viewAccounts.style.display = 'flex';
+  if (tabName === 'accounts') {
+    document.getElementById('view-accounts').style.display = 'flex';
+    const tabBtn = document.getElementById('tab-btn-accounts');
+    if (tabBtn) tabBtn.classList.add('active');
     if (!document.body.classList.contains('mobile-view-detail')) {
       document.body.classList.remove('hide-header');
     }
-  } else if (tab === 'debts') {
-    const navDebts = document.getElementById('tab-nav-debts');
-    if (navDebts) navDebts.classList.add('active');
-    if (viewDebts) viewDebts.style.display = 'flex';
+    renderAccountsView();
+  } else if (tabName === 'debts') {
+    document.getElementById('view-debt-tracker').style.display = 'flex';
+    const tabBtn = document.getElementById('tab-btn-debts');
+    if (tabBtn) tabBtn.classList.add('active');
     document.body.classList.add('hide-header');
-    if (window.renderDebtTrackerView) window.renderDebtTrackerView();
-  } else if (tab === 'settings') {
-    const navSettings = document.getElementById('tab-nav-settings');
-    if (navSettings) navSettings.classList.add('active');
-    if (viewSettings) viewSettings.style.display = 'flex';
+    if (typeof renderDebtTrackerView === 'function') renderDebtTrackerView();
+  } else if (tabName === 'all-txs') {
+    document.getElementById('view-all-txs').style.display = 'flex';
+    const tabBtn = document.getElementById('tab-btn-all');
+    if (tabBtn) tabBtn.classList.add('active');
+    document.body.classList.add('hide-header');
+    renderAllTransactionsView();
+  } else if (tabName === 'settings') {
+    document.getElementById('view-settings').style.display = 'flex';
+    const tabBtn = document.getElementById('tab-btn-settings');
+    if (tabBtn) tabBtn.classList.add('active');
     document.body.classList.add('hide-header');
     
     const baseCur = document.getElementById('setting-base-currency');
@@ -1085,11 +1125,75 @@ window.switchMainTab = function(tab) {
   }
 };
 
+// 渲染「🧾 全部」全域流水帳視圖
+window.renderAllTransactionsView = function() {
+  const container = document.getElementById('all-transactions-list');
+  const heroSlot = document.querySelector('.all-txs-hero-slot');
+  if (!container) return;
+
+  if (heroSlot) {
+    const mainNetWorth = document.querySelector('.net-worth-box');
+    if (mainNetWorth) {
+      heroSlot.innerHTML = mainNetWorth.outerHTML;
+    }
+  }
+
+  container.innerHTML = '';
+
+  const sortedTxs = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (sortedTxs.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">尚無任何交易紀錄</p>';
+    return;
+  }
+
+  let currentMonthKey = '';
+  let monthGroupDiv = null;
+
+  sortedTxs.forEach(tx => {
+    const dStr = (tx.date || '').split('T')[0];
+    const mKey = dStr.substring(0, 7);
+
+    if (mKey !== currentMonthKey) {
+      currentMonthKey = mKey;
+      const mHeader = document.createElement('div');
+      mHeader.style.cssText = 'font-size:12px; font-weight:700; color:var(--text-muted); padding:16px 4px 6px 4px; text-transform:uppercase;';
+      mHeader.innerText = currentMonthKey;
+      container.appendChild(mHeader);
+
+      monthGroupDiv = document.createElement('div');
+      monthGroupDiv.style.cssText = 'background:#FFFFFF; border-radius:16px; padding:4px 16px; border:0.5px solid var(--border-light); margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02);';
+      container.appendChild(monthGroupDiv);
+    }
+
+    const cat = categories.find(c => c.id === tx.categoryId);
+    const catName = cat ? cat.name : (tx.type || '一般交易');
+    const amtNum = parseFloat(tx.amount || 0);
+    const isIncome = tx.type === 'income';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:0.5px solid #F2F2F7; cursor:pointer;';
+    row.onclick = () => openTxPage(tx.id);
+
+    row.innerHTML = `
+      <div>
+        <div style="font-size:15px; font-weight:600; color:#1C1C1E;">${tx.title || '無標題'}</div>
+        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">${catName} • ${dStr}</div>
+      </div>
+      <div style="font-size:15px; font-weight:700; color:${isIncome ? '#2D6A4F' : '#1C1C1E'};">
+        ${isIncome ? '+' : '-'}${fmtCur(amtNum, baseCurrency)}
+      </div>
+    `;
+    if (monthGroupDiv) monthGroupDiv.appendChild(row);
+  });
+};
+
 window.openTxPage = function(txId = null) {
   previousActiveTab = currentMainTab || 'accounts';
   
   document.getElementById('view-accounts').style.display = 'none';
   if (document.getElementById('view-debt-tracker')) document.getElementById('view-debt-tracker').style.display = 'none';
+  if (document.getElementById('view-all-txs')) document.getElementById('view-all-txs').style.display = 'none';
   if (document.getElementById('view-settings')) document.getElementById('view-settings').style.display = 'none';
   
   const tabBar = document.querySelector('.ios-tab-bar');
@@ -1465,7 +1569,7 @@ function createTxElement(tx, currentAcc) {
         title = `兌換至 ${toAcc ? toAcc.name : ''}`;
         amtClass = 'transfer';
         amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}</span>`;
+        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}</span>`;
       } else {
         title = `由 ${fromAcc ? fromAcc.name : ''} 存入`;
         amtClass = 'income';
@@ -1948,7 +2052,6 @@ window.saveTransaction = function() {
     if (!symbol || isNaN(shares) || isNaN(price) || isNaN(amount)) { alert('請填寫完整股票明細！'); return false; }
     txData = { ...txData, symbol, shares, price, amount, commission };
 
-    // 👈 買入新股票時自動登記 Symbol 至待追加清單
     if (currentTxType === 'buy' && symbol) {
       const knownSymbols = Object.keys(stockPriceCache);
       if (!knownSymbols.includes(symbol)) {

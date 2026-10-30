@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#FAF9F6">
+  <meta name="theme-color" content="#F2F2F7">
 
   <!-- iOS 桌面圖示 (Apple Touch Icon) -->
   <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
@@ -44,6 +44,7 @@
         <div id="desktop-nav-dropdown" class="desktop-dropdown-menu" style="display: none;">
           <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">🪪 戶口主頁</button>
           <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">🚩 內部借貸</button>
+          <button type="button" onclick="switchMainTab('all-txs'); toggleDesktopMenu(false);">🧾 全部流水</button>
           <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">⚙️ 系統設定</button>
         </div>
       </div>
@@ -56,14 +57,23 @@
     <!-- View 1: 戶口列表與明細 View -->
     <div class="app-container" id="view-accounts">
       <div class="sidebar">
-        <div class="sidebar-actions">
-          <button type="button" class="btn-action" style="flex:1;" onclick="openAccountModal()">+ 新增 Account</button>
-          <button type="button" class="btn-action btn-secondary" style="flex:1;" onclick="openGroupModal()">+ 新增 Group</button>
+        <!-- 頂部操作膠囊按鈕組（編輯、＋帳戶、＋分組） -->
+        <div class="top-action-bar">
+          <button id="btn-toggle-edit-mode" class="capsule-btn" type="button" onclick="toggleEditMode()" style="flex: 1;">
+            <span class="btn-icon">✏️</span> <span id="txt-edit-mode">編輯</span>
+          </button>
+          <button class="capsule-btn" type="button" onclick="openAccountModal()" style="flex: 1.2;">
+            <span class="btn-icon" style="color: #007AFF;">＋</span> 帳戶
+          </button>
+          <button class="capsule-btn" type="button" onclick="openGroupModal()" style="flex: 1.2;">
+            <span class="btn-icon" style="color: #007AFF;">＋</span> 分組
+          </button>
         </div>
-        <div id="sidebar-accounts" style="display:flex; flex-direction:column; gap:12px;"></div>
+
+        <div id="sidebar-accounts" style="display:flex; flex-direction:column;"></div>
       </div>
 
-      <!-- 帳戶流水詳情視圖 -->
+      <!-- 帳戶流水詳情視圖 (已移除相機按鈕) -->
       <div class="main-detail" id="main-detail-scroll" onscroll="handleMainScroll(this)">
         <div class="sticky-control-panel">
           <div class="detail-header">
@@ -75,12 +85,7 @@
               </div>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-              <!-- 信用卡專屬：對帳單按鈕 -->
               <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
-              <!-- 📷 OCR 截圖按鈕 -->
-              <input type="file" id="ocr-file-input" accept="image/*" style="display: none;" onchange="handleOCRImageSelected(event)">
-              <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('ocr-file-input').click()" title="截圖記帳">📷</button>
-              <!-- 帳戶設定與記帳 -->
               <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
               <button class="btn-action" onclick="openTxPage(null)" title="記一筆">＋</button>
             </div>
@@ -96,7 +101,6 @@
               <button class="invest-tab-btn active" id="tab-btn-holdings" onclick="switchInvestSubTab('holdings')">Holdings (持倉)</button>
               <button class="invest-tab-btn" id="tab-btn-txs" onclick="switchInvestSubTab('transactions')">Transactions (流水帳)</button>
             </div>
-            <!-- 按鈕增加 id="btn-refresh-prices" 支援狀態反饋 -->
             <button class="btn-action btn-secondary" id="btn-refresh-prices" style="padding: 4px 10px; font-size: 11px;" onclick="refreshLiveStockPrices()">🔄 更新市價</button>
           </div>
         </div>
@@ -114,7 +118,13 @@
       <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
 
-    <!-- View 3: 系統設定獨立 Page View -->
+    <!-- View 3: 「🧾 全部」全域流水帳平級視圖 -->
+    <div id="view-all-txs" class="main-page-view" style="display: none;">
+      <div class="all-txs-hero-slot"></div>
+      <div id="all-transactions-list" style="padding: 0 16px 80px 16px;"></div>
+    </div>
+
+    <!-- View 4: 系統設定獨立 Page View -->
     <div id="view-settings" class="main-page-view" style="display: none;">
       <div class="page-view-header">
         <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>
@@ -160,7 +170,7 @@
       </div>
     </div>
 
-    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View -->
+    <!-- View 5: 新增 / 編輯交易獨立全螢幕 Page View -->
     <div id="view-tx-form" class="main-page-view" style="display: none; background: var(--card-bg);">
       <div class="page-view-header">
         <button class="btn-back" type="button" onclick="closeTxPage()" style="display: inline-block;">‹ 取消</button>
@@ -280,21 +290,37 @@
 
   <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
 
-  <!-- iOS 底部毛玻璃三 Tab Bar -->
+  <!-- 底部 iOS 5 鍵 Tab Bar（包含快捷拍照） -->
   <nav class="ios-tab-bar">
-    <button class="tab-item active" id="tab-nav-accounts" type="button" onclick="switchMainTab('accounts')">
+    <button class="tab-item active" id="tab-btn-accounts" type="button" onclick="switchMainTab('accounts')">
       <div class="tab-pill">🪪</div>
       <span>戶口</span>
     </button>
-    <button class="tab-item" id="tab-nav-debts" type="button" onclick="switchMainTab('debts')">
+    
+    <!-- 拍照記帳快捷鍵 -->
+    <button class="tab-item tab-action-camera" type="button" onclick="triggerBottomCamera()">
+      <div class="tab-pill" style="background: #E5F2FF; color: #007AFF;">📷</div>
+      <span>拍照</span>
+    </button>
+    
+    <button class="tab-item" id="tab-btn-debts" type="button" onclick="switchMainTab('debts')">
       <div class="tab-pill">🚩</div>
       <span>借貸</span>
     </button>
-    <button class="tab-item" id="tab-nav-settings" type="button" onclick="switchMainTab('settings')">
+    
+    <button class="tab-item" id="tab-btn-all" type="button" onclick="switchMainTab('all-txs')">
+      <div class="tab-pill">🧾</div>
+      <span>全部</span>
+    </button>
+    
+    <button class="tab-item" id="tab-btn-settings" type="button" onclick="switchMainTab('settings')">
       <div class="tab-pill">⚙️</div>
       <span>設定</span>
     </button>
   </nav>
+
+  <!-- 隱藏之相機/截圖 File Input -->
+  <input type="file" id="bottom-camera-input" accept="image/*" style="display: none;" onchange="handleBottomCameraUpload(event)">
 
   <!-- Modal：新增 / 編輯 Category -->
   <div class="modal-overlay" id="cat-edit-modal">
