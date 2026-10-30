@@ -96,7 +96,8 @@
               <button class="invest-tab-btn active" id="tab-btn-holdings" onclick="switchInvestSubTab('holdings')">Holdings (持倉)</button>
               <button class="invest-tab-btn" id="tab-btn-txs" onclick="switchInvestSubTab('transactions')">Transactions (流水帳)</button>
             </div>
-            <button class="btn-action btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="refreshLiveStockPrices()">🔄 更新市價</button>
+            <!-- 按鈕增加 id="btn-refresh-prices" 支援狀態反饋 -->
+            <button class="btn-action btn-secondary" id="btn-refresh-prices" style="padding: 4px 10px; font-size: 11px;" onclick="refreshLiveStockPrices()">🔄 更新市價</button>
           </div>
         </div>
 
@@ -243,7 +244,7 @@
             <label>股票代號</label>
             <div style="display: flex; gap: 8px;">
               <input type="text" id="tx-stock-symbol" placeholder="例如：HXT.TO / AAPL" oninput="this.value = this.value.toUpperCase()" style="flex: 1;">
-              <button class="btn-action btn-secondary" id="btn-quote-search" type="button" onclick="fetchQuoteForInput()">🔍 查 Yahoo 市價</button>
+              <button class="btn-action btn-secondary" id="btn-quote-search" type="button" onclick="fetchQuoteForInput()">🔍 查市價</button>
             </div>
           </div>
           <div class="form-group" id="stock-shares-box">
@@ -368,7 +369,7 @@
     </div>
   </div>
 
-  <!-- Modal：Group 管理（已加入「自選 Emoji」輸入框） -->
+  <!-- Modal：Group 管理 -->
   <div class="modal-overlay" id="group-modal">
     <div class="modal-card">
       <div class="modal-header">

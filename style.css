@@ -89,7 +89,7 @@ body.hide-header header {
   white-space: nowrap;
 }
 
-/* 頂部右側手動同步按鈕 */
+/* 頂部右側同步按鈕樣式 */
 .sync-status {
   font-size: 12px;
   font-weight: 600;
@@ -103,12 +103,19 @@ body.hide-header header {
   gap: 5px;
   cursor: pointer;
   outline: none;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
 }
 .sync-status:hover { background: #EAE6DF; }
-.sync-status.synced { color: #2D6A4F; }
+.sync-status.synced { color: #2D6A4F; background: #E8F5E9; border-color: rgba(45, 106, 79, 0.2); }
 .sync-status.syncing { color: #8A6D1F; background: #FFF9E6; border-color: #FFE082; }
 .sync-status.error { color: #D95D5D; background: #FFEBEE; border-color: #FFCDD2; }
+
+/* 待上傳佇列橘黃色高亮 */
+.sync-status.pending-sync {
+  background: #FFF3E0 !important;
+  color: #D97706 !important;
+  border: 1px solid rgba(217, 119, 6, 0.3) !important;
+}
 
 /* 電腦版選單樣式 */
 @media (max-width: 768px) {
@@ -215,7 +222,7 @@ body.hide-header header {
 }
 .sidebar-actions { display: flex; gap: 8px; }
 
-/* --- 馬卡龍 Group 方塊 Badge (方案 A) --- */
+/* 馬卡龍 Group 方塊 Badge */
 .group-macaron-badge {
   width: 36px;
   height: 36px;
@@ -235,7 +242,7 @@ body.hide-header header {
 .group-badge-purple { background-color: var(--macaron-purple, #E2D4F0); color: var(--macaron-purple-text, #603D82); }
 .group-badge-grey   { background-color: var(--macaron-grey, #E5E7EB);   color: var(--macaron-grey-text, #4B5563); }
 
-/* --- 結餘色彩規格（正綠、負紅、零元灰） --- */
+/* 結餘色彩規格 */
 .bal-positive { color: #2D6A4F !important; font-weight: 700; }
 .bal-negative { color: #E5484D !important; font-weight: 700; }
 .bal-zero     { color: #8E8E93 !important; font-weight: 600; }
@@ -301,6 +308,7 @@ body.hide-header header {
   background: var(--text-main); color: white; border: none; padding: 7px 14px;
   border-radius: 18px; font-size: 12px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;
+  transition: opacity 0.2s ease;
 }
 .btn-secondary { background: var(--border-color); color: var(--text-main); }
 

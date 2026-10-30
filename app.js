@@ -69,7 +69,6 @@ let accounts = JSON.parse(localStorage.getItem('wiz_accs_cloud')) || DEFAULT_ACC
 let transactions = JSON.parse(localStorage.getItem('wiz_txs_cloud')) || [];
 let stockPriceCache = JSON.parse(localStorage.getItem('wiz_stock_cache_cloud')) || { 'HXT.TO': 98.50, 'AAPL': 225.00 };
 
-// 預設折疊狀態快取
 let collapsedGroups = JSON.parse(localStorage.getItem('wiz_collapsed_groups')) || {};
 let collapsedCatParents = JSON.parse(localStorage.getItem('wiz_collapsed_cats')) || {};
 
@@ -82,7 +81,62 @@ let previousActiveTab = 'accounts';
 let searchKeyword = '';
 let chartInstance = null;
 
-// 1. 電腦版選單控制
+// =======================
+// 待同步佇列 (Pending Outbox)
+// =======================
+function getPendingUploads() {
+  return JSON.parse(localStorage.getItem('wiz_pending_uploads')) || [];
+}
+
+function addPendingUpload(txId) {
+  const list = getPendingUploads();
+  if (!list.includes(txId)) {
+    list.push(txId);
+    localStorage.setItem('wiz_pending_uploads', JSON.stringify(list));
+  }
+  updateSyncStatusUI();
+}
+
+function clearPendingUploads() {
+  localStorage.removeItem('wiz_pending_uploads');
+  updateSyncStatusUI();
+}
+
+// 根據同步狀態更新頂部 UI 指示燈
+function updateSyncStatusUI(customState = null, msg = null) {
+  const btn = document.getElementById('btn-manual-sync');
+  const icon = document.getElementById('sync-icon');
+  const text = document.getElementById('sync-text');
+  if (!btn || !icon || !text) return;
+
+  const pending = getPendingUploads();
+
+  if (customState === 'syncing') {
+    btn.className = 'sync-status syncing';
+    icon.innerText = '🔄';
+    text.innerText = msg || '正在同步...';
+    return;
+  }
+
+  if (customState === 'error') {
+    btn.className = 'sync-status error';
+    icon.innerText = '⚠️';
+    text.innerText = msg || '同步失敗';
+    return;
+  }
+
+  if (pending.length > 0) {
+    btn.className = 'sync-status pending-sync';
+    icon.innerText = '🟠';
+    text.innerText = `未同步 (${pending.length} 筆待上傳)`;
+  } else {
+    btn.className = 'sync-status synced';
+    icon.innerText = '☁️';
+    text.innerText = '已同步';
+  }
+}
+
+// 電腦版選單控制
 window.toggleDesktopMenu = function(forceState = null) {
   const menu = document.getElementById('desktop-nav-dropdown');
   if (!menu) return;
@@ -100,7 +154,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// 輔助函式：根據分組名稱或帳戶類型推斷預設 Emoji 圖示
 function getGroupDefaultIcon(grp) {
   if (grp.icon && grp.icon.trim()) return grp.icon.trim();
   const name = (grp.name || '').toLowerCase();
@@ -111,7 +164,6 @@ function getGroupDefaultIcon(grp) {
   return '📁';
 }
 
-// 輔助函式：取得結餘正負對應 class
 function getBalanceColorClass(amt) {
   const num = parseFloat(amt);
   if (isNaN(num) || Math.abs(num) < 0.005) return 'bal-zero';
@@ -234,77 +286,114 @@ function fmtCur(amt, cur = 'CAD') {
   return `${sign}$${formatted} ${cur}`;
 }
 
-window.setSyncStatus = function(state, msg) {
-  const btn = document.getElementById('btn-manual-sync');
-  const text = document.getElementById('sync-text');
-  const icon = document.getElementById('sync-icon');
-  if (btn) btn.className = `sync-status ${state}`;
-  if (text) text.innerText = msg;
-  if (icon) {
-    if (state === 'syncing') icon.innerText = '⏳';
-    else if (state === 'synced') icon.innerText = '☁️';
-    else if (state === 'error') icon.innerText = '⚠️';
-    else icon.innerText = '☁️';
-  }
-};
-
+// ==========================================
+// 雙向同步核心流程加固（先 Push 後 Pull）
+// ==========================================
 window.pushToGoogleSheet = async function() {
-  if (!SCRIPT_URL) return;
-  setSyncStatus('syncing', '正在儲存...');
+  if (!SCRIPT_URL) return false;
   try {
     const debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
-    const payload = { accounts, groups, categories, transactions, debtRepayments };
+    const newSymbols = window.pendingNewSymbols || [];
+    const payload = { accounts, groups, categories, transactions, debtRepayments, newSymbols };
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    setSyncStatus('synced', '已同步');
+    window.pendingNewSymbols = [];
+    return true;
   } catch (err) {
     console.error('Push failed:', err);
-    setSyncStatus('error', '同步失敗');
+    return false;
   }
 };
 
 window.pullFromGoogleSheet = async function() {
-  if (!SCRIPT_URL) {
-    setSyncStatus('', '未連線（點擊設定）');
-    return;
+  if (!SCRIPT_URL) return false;
+  const res = await fetch(SCRIPT_URL);
+  if (!res.ok) throw new Error('Network response was not ok');
+  const data = await res.json();
+  
+  if (data.accounts && data.accounts.length > 0) accounts = data.accounts;
+  if (data.groups && data.groups.length > 0) groups = data.groups;
+  if (data.categories && data.categories.length > 0) categories = data.categories;
+  if (data.transactions) transactions = data.transactions;
+  if (data.debtRepayments && Array.isArray(data.debtRepayments)) {
+    localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
   }
-  setSyncStatus('syncing', '正在讀取...');
-  try {
-    const res = await fetch(SCRIPT_URL);
-    const data = await res.json();
-    
-    if (data.accounts && data.accounts.length > 0) accounts = data.accounts;
-    if (data.groups && data.groups.length > 0) groups = data.groups;
-    if (data.categories && data.categories.length > 0) categories = data.categories;
-    if (data.transactions) transactions = data.transactions;
-    if (data.debtRepayments && Array.isArray(data.debtRepayments)) {
-      localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
-    }
 
-    if (accounts.length > 0 && !accounts.some(a => a.id === currentAccountId)) {
-      currentAccountId = accounts[0].id;
-    }
-
-    saveLocalDataOnly();
-    setSyncStatus('synced', '已是最新');
-  } catch (err) {
-    console.error('Pull failed:', err);
-    setSyncStatus('error', '連線失敗');
+  // 👈 接收 StockPrices 表並更新 stockPriceCache（非正數或 N/A 則保留原值/fallback）
+  if (data.stockPrices && Array.isArray(data.stockPrices)) {
+    data.stockPrices.forEach(row => {
+      const sym = (row.symbol || '').toString().trim().toUpperCase();
+      const p = parseFloat(row.price);
+      if (sym && !isNaN(p) && p > 0) {
+        stockPriceCache[sym] = p;
+      }
+    });
+    localStorage.setItem('wiz_stock_cache_cloud', JSON.stringify(stockPriceCache));
   }
+
+  if (accounts.length > 0 && !accounts.some(a => a.id === currentAccountId)) {
+    currentAccountId = accounts[0].id;
+  }
+
+  saveLocalDataOnly();
+  return true;
 };
 
-window.manualSyncTrigger = function() {
+// 手動同步觸發入口（先 Push 後 Pull，斷線嚴禁覆蓋）
+window.manualSyncTrigger = async function() {
   if (!SCRIPT_URL) {
+    alert('請先在設定頁面填入 Google Apps Script URL！');
     switchMainTab('settings');
     return;
   }
-  setSyncStatus('syncing', '同步中...');
-  pullFromGoogleSheet();
+  
+  updateSyncStatusUI('syncing', '正在同步...');
+
+  try {
+    // 步驟 1：若本機有未同步資料，必須先 Push 上雲端
+    const pendingList = getPendingUploads();
+    if (pendingList.length > 0 || window.hasLocalChanges) {
+      const pushSuccess = await pushToGoogleSheet();
+      if (!pushSuccess) {
+        throw new Error('Push failed');
+      }
+      clearPendingUploads();
+      window.hasLocalChanges = false;
+    }
+
+    // 步驟 2：Push 成功後，才安全執行 Pull 拉取最新資料
+    await pullFromGoogleSheet();
+    updateSyncStatusUI();
+  } catch (err) {
+    console.error('同步失敗：', err);
+    updateSyncStatusUI('error', '連線失敗');
+    setTimeout(() => updateSyncStatusUI(), 3000);
+    alert('⚠️ 網絡連線不穩，同步失敗！本機資料已妥善保存，稍後連線恢復將自動重試。');
+  }
 };
+
+// 儲存交易時，若連線失敗自動進入 Pending 佇列
+async function handleAfterTxSave(txId) {
+  window.hasLocalChanges = true;
+  updateSyncStatusUI('syncing', '正在上傳...');
+  
+  try {
+    const success = await pushToGoogleSheet();
+    if (success) {
+      window.hasLocalChanges = false;
+      clearPendingUploads();
+      updateSyncStatusUI();
+    } else {
+      addPendingUpload(txId);
+    }
+  } catch (e) {
+    addPendingUpload(txId);
+  }
+}
 
 function saveLocalDataOnly() {
   localStorage.setItem('wiz_cats_cloud', JSON.stringify(categories));
@@ -315,9 +404,9 @@ function saveLocalDataOnly() {
   renderApp();
 }
 
-window.saveData = function() {
+window.saveData = function(txId = null) {
   saveLocalDataOnly();
-  pushToGoogleSheet();
+  handleAfterTxSave(txId || ('tx-' + Date.now()));
 };
 
 function normalizeDateString(dateStr) {
@@ -569,7 +658,7 @@ window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  setSyncStatus('syncing', '正在 OCR 辨識截圖...');
+  updateSyncStatusUI('syncing', '正在 OCR 辨識截圖...');
 
   try {
     const worker = await Tesseract.createWorker('eng');
@@ -606,7 +695,7 @@ window.handleOCRImageSelected = async function(event) {
       guessedDate = normalizeDateString(dateMatch[1]);
     }
 
-    setSyncStatus('synced', '辨識完成');
+    updateSyncStatusUI();
 
     let targetAccId = currentAccountId;
     if (!targetAccId && accounts.length > 0) {
@@ -628,71 +717,61 @@ window.handleOCRImageSelected = async function(event) {
 
   } catch (err) {
     console.error('OCR failed:', err);
-    setSyncStatus('error', 'OCR 辨識失敗');
+    updateSyncStatusUI('error', 'OCR 辨識失敗');
+    setTimeout(() => updateSyncStatusUI(), 3000);
     alert('截圖辨識未能成功，請直接手動輸入。');
   } finally {
     event.target.value = '';
   }
 };
 
-window.fetchQuote = async function(symbol) {
+// 模組 3：拔除前端 Proxy 輪詢，改為讀取本機快取
+window.fetchQuote = function(symbol) {
   if (!symbol) return null;
   const querySym = symbol.trim().toUpperCase();
-  const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(querySym)}`;
-
-  const proxyBuilders = [
-    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-    url => `https://corsproxy.io/?${encodeURIComponent(url)}`
-  ];
-
-  for (const buildProxy of proxyBuilders) {
-    try {
-      const proxyUrl = buildProxy(targetUrl);
-      const res = await fetch(proxyUrl);
-      if (res.ok) {
-        const text = await res.text();
-        const data = JSON.parse(text);
-        const price = data.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (price) {
-          stockPriceCache[querySym] = Number(price);
-          localStorage.setItem('wiz_stock_cache_cloud', JSON.stringify(stockPriceCache));
-          return price;
-        }
-      }
-    } catch (err) {
-      continue;
-    }
-  }
-
   return stockPriceCache[querySym] || null;
 };
 
-window.fetchQuoteForInput = async function() {
+window.fetchQuoteForInput = function() {
   const sym = document.getElementById('tx-stock-symbol').value.trim().toUpperCase();
   if (!sym) { alert('請先輸入 Symbol！'); return; }
   
-  const btn = document.getElementById('btn-quote-search');
-  btn.innerText = '拉取中... ⏳';
-  const price = await fetchQuote(sym);
-  btn.innerText = '🔍 查 Yahoo 市價';
-
+  const price = fetchQuote(sym);
   if (price) {
     document.getElementById('tx-stock-price').value = Number(price).toFixed(2);
     calcStockTotal();
   } else {
-    alert('未能即時拉取報價，請手動輸入市價。');
+    alert(`在 StockPrices 表中尚未有 ${sym} 的快取報價，請直接輸入市價，系統將自動同步並計算！`);
   }
 };
 
+// 點擊「🔄 更新市價」邏輯與按鈕即時反饋
 window.refreshLiveStockPrices = async function() {
-  const symbols = new Set(transactions.filter(t => t.symbol).map(t => t.symbol));
-  if (symbols.size === 0) return;
-  for (const sym of symbols) {
-    await fetchQuote(sym);
+  const btn = document.getElementById('btn-refresh-prices') || event?.target;
+  const originalText = btn ? btn.innerText : '🔄 更新市價';
+
+  if (btn) {
+    btn.innerText = '⏳ 正在更新市價...';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'not-allowed';
   }
-  renderApp();
-  alert('持倉市價已更新完成！✨');
+
+  try {
+    // 觸發手動同步，由後端從 Google Sheet 的 StockPrices 分頁帶回最新價格
+    await manualSyncTrigger();
+    renderApp();
+    alert('✅ 持倉市價已更新');
+  } catch (err) {
+    alert('⚠️ 更新市價失敗，請檢查網絡連線！');
+  } finally {
+    if (btn) {
+      btn.innerText = originalText;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  }
 };
 
 function getAccountCashBalance(accId) {
@@ -758,6 +837,7 @@ function getAccountCashBalance(accId) {
   return balance;
 }
 
+// 嚴格 Fallback 邏輯：stockPriceCache[sym] || avgCost（Crypto & 股票共用會計防崩潰）
 function getHoldings(accId) {
   const holdingsMap = {};
   const accTxs = transactions
@@ -794,6 +874,7 @@ function getHoldings(accId) {
   for (const [sym, data] of Object.entries(holdingsMap)) {
     if (data.shares > 0.0001) {
       const avgCost = data.shares > 0 ? (data.totalCost / data.shares) : 0;
+      // 👈 Crypto & 股票通用保底機制
       const currentPrice = stockPriceCache[sym] || avgCost;
       const marketValue = data.shares * currentPrice;
       const capitalGL = marketValue - data.totalCost;
@@ -822,7 +903,7 @@ function getAccountTotalValue(accId) {
   const cash = getAccountCashBalance(accId);
   const acc = accounts.find(a => a.id === accId);
   if (!acc) return 0;
-  if (acc.type === 'investment') {
+  if (acc.type === 'investment' || acc.type === 'crypto') {
     const holdings = getHoldings(accId);
     const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
     return cash + holdingsValue;
@@ -830,7 +911,7 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 模組 4：重構 renderAccountsView（市值修復 + 自選 Emoji + 帳戶名稱去雜訊）
+// 主頁帳戶分組渲染（市值復位 + 自選 Emoji + 乾淨排版）
 window.renderAccountsView = function() {
   const container = document.getElementById('sidebar-accounts');
   if (!container) return;
@@ -839,18 +920,15 @@ window.renderAccountsView = function() {
   if (typeof collapsedGroups === 'undefined') window.collapsedGroups = {};
 
   groups.forEach(grp => {
-    // 預設維持折疊狀態
     const isCollapsed = collapsedGroups[grp.id] !== false;
     const grpAccounts = accounts.filter(a => a.groupId === grp.id);
 
-    // 👈 市值修復：使用 getAccountTotalValue 計算分組結餘
     let grpTotal = 0;
     grpAccounts.forEach(acc => {
       const b = (typeof getAccountTotalValue === 'function') ? getAccountTotalValue(acc.id) : getAccountCashBalance(acc.id);
       grpTotal += convertAmount(b, acc.currency, grp.currency || baseCurrency);
     });
 
-    // 優先使用用戶自選 Emoji，若無才 fallback 預設
     const grpIcon = (grp.icon && grp.icon.trim()) ? grp.icon.trim() : (typeof getGroupDefaultIcon === 'function' ? getGroupDefaultIcon(grp) : '📁');
     const themeKey = (grp.theme || 'mint').toLowerCase();
     const badgeClass = `group-badge-${themeKey}`;
@@ -886,7 +964,6 @@ window.renderAccountsView = function() {
       accList.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">此分組尚無帳戶</div>';
     } else {
       grpAccounts.forEach((acc, idx) => {
-        // 👈 市值修復：單帳戶結餘調用 getAccountTotalValue
         const bal = (typeof getAccountTotalValue === 'function') ? getAccountTotalValue(acc.id) : getAccountCashBalance(acc.id);
         const itemBalClass = getBalanceColorClass(bal);
 
@@ -895,7 +972,6 @@ window.renderAccountsView = function() {
         if (idx === grpAccounts.length - 1) row.style.borderBottom = 'none';
         row.onclick = () => selectAccount(acc.id);
 
-        // 👈 去除雜訊：乾淨只顯示 acc.name，徹底移除 ${acc.type}
         row.innerHTML = `
           <div>
             <div style="font-size:15px; font-weight:600; color:#1C1C1E;">${acc.name}</div>
@@ -914,7 +990,6 @@ window.renderAccountsView = function() {
   });
 };
 
-// 折疊狀態切換
 window.toggleGroupCollapse = function(grpId) {
   if (typeof collapsedGroups === 'undefined') window.collapsedGroups = {};
   const currentState = collapsedGroups[grpId] !== false;
@@ -939,6 +1014,7 @@ window.renderApp = function() {
   renderDetailView();
   if (window.renderDebtTrackerView) window.renderDebtTrackerView();
   renderCategoryTree();
+  updateSyncStatusUI();
 };
 
 window.selectAccount = function(accId) {
@@ -1062,7 +1138,7 @@ window.deleteCurrentTxFromPage = function() {
 
 function resetTxForm() {
   const defaultAcc = accounts.find(a => a.id === currentAccountId) || accounts[0];
-  const isInvest = defaultAcc && defaultAcc.type === 'investment';
+  const isInvest = defaultAcc && (defaultAcc.type === 'investment' || defaultAcc.type === 'crypto');
 
   ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
    'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
@@ -1094,7 +1170,7 @@ function setupEditTxForm(txId) {
   const tx = transactions.find(t => t.id === txId);
   if (!tx) return;
   const acc = accounts.find(a => a.id === tx.accountId) || accounts[0];
-  const isInvest = acc && acc.type === 'investment';
+  const isInvest = acc && (acc.type === 'investment' || acc.type === 'crypto');
 
   ['tx-id', 'tx-title', 'tx-amount', 'tx-from-amount', 'tx-to-amount', 
    'tx-exchange-rate', 'tx-commission', 'tx-stock-symbol', 'tx-stock-shares', 
@@ -1183,7 +1259,7 @@ function renderDetailView() {
   const totalVal = getAccountTotalValue(currentAcc.id);
   const cashBal = getAccountCashBalance(currentAcc.id);
 
-  if (currentAcc.type === 'investment') {
+  if (currentAcc.type === 'investment' || currentAcc.type === 'crypto') {
     if (investTabs) investTabs.style.display = 'flex';
     if (balEl) balEl.innerText = `總市值: ${fmtCur(totalVal, currentAcc.currency)} (現金: ${fmtCur(cashBal, currentAcc.currency)})`;
     if (currentInvestSubTab === 'holdings') {
@@ -1389,7 +1465,7 @@ function createTxElement(tx, currentAcc) {
         title = `兌換至 ${toAcc ? toAcc.name : ''}`;
         amtClass = 'transfer';
         amtStr = `-${fmtCur(Number(tx.amount) + comm, displayCur)}`;
-        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, displayCur) : ''}</span>`;
+        catBadgeHtml = `<span class="tx-cat-chip">💱 匯率 ${tx.rate || '-'}${comm > 0 ? ' • 手續費 ' + fmtCur(comm, tx.currency) : ''}</span>`;
       } else {
         title = `由 ${fromAcc ? fromAcc.name : ''} 存入`;
         amtClass = 'income';
@@ -1444,7 +1520,7 @@ window.toggleTxFlag = function(txId) {
       const linked = transactions.find(t => t.id === tx.linkedTxId);
       if (linked) linked.isPending = tx.isPending;
     }
-    saveData();
+    saveData(tx.id);
   }
 };
 
@@ -1871,6 +1947,17 @@ window.saveTransaction = function() {
     const commission = parseFloat(document.getElementById('tx-stock-commission').value) || 0;
     if (!symbol || isNaN(shares) || isNaN(price) || isNaN(amount)) { alert('請填寫完整股票明細！'); return false; }
     txData = { ...txData, symbol, shares, price, amount, commission };
+
+    // 👈 買入新股票時自動登記 Symbol 至待追加清單
+    if (currentTxType === 'buy' && symbol) {
+      const knownSymbols = Object.keys(stockPriceCache);
+      if (!knownSymbols.includes(symbol)) {
+        window.pendingNewSymbols = window.pendingNewSymbols || [];
+        if (!window.pendingNewSymbols.includes(symbol)) {
+          window.pendingNewSymbols.push(symbol);
+        }
+      }
+    }
   } else if (currentTxType === 'dividend') {
     const symbol = document.getElementById('tx-stock-symbol').value.trim().toUpperCase();
     const amount = parseFloat(document.getElementById('tx-stock-total').value);
@@ -1885,7 +1972,7 @@ window.saveTransaction = function() {
     transactions.push(txData);
   }
 
-  saveData();
+  saveData(txData.id);
   return true;
 };
 
@@ -1900,7 +1987,7 @@ window.deleteCurrentTx = function() {
     transactions = transactions.filter(t => t.id !== id);
   }
 
-  saveData();
+  saveData(id);
 };
 
 window.handleExchangeInput = function(source) {
@@ -1980,7 +2067,7 @@ window.saveCloudConfigFromSettings = function() {
   SCRIPT_URL = url;
   localStorage.setItem('wiz_gas_url', SCRIPT_URL);
   alert('已更新 Google Sheets URL 並嘗試同步！');
-  pullFromGoogleSheet();
+  manualSyncTrigger();
 };
 
 window.switchCatViewType = function(type) {
@@ -2251,7 +2338,6 @@ window.deleteCurrentAccount = function() {
   saveData();
 };
 
-// Group 新增/編輯 Modal 加固：支援 group-icon 欄位
 window.openGroupModal = function() {
   const modal = document.getElementById('group-modal');
   if (!modal) return;
@@ -2341,10 +2427,10 @@ try {
   if (typeof renderApp === 'function') renderApp();
   
   const savedGasUrl = localStorage.getItem('wiz_gas_url') || "";
-  if (savedGasUrl && typeof pullFromGoogleSheet === 'function') {
-    pullFromGoogleSheet();
-  } else if (typeof setSyncStatus === 'function') {
-    setSyncStatus('', '未連線（點擊設定）');
+  if (savedGasUrl && typeof manualSyncTrigger === 'function') {
+    manualSyncTrigger();
+  } else {
+    updateSyncStatusUI();
   }
 } catch (initErr) {
   console.error('初始化失敗:', initErr);
