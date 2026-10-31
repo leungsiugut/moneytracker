@@ -30,8 +30,11 @@
   padding: 0; 
 }
 
-body, html, .app-container, .main-detail, #view-settings, #view-debt-tracker, #view-all-txs {
+/* 全域子分頁與彈窗容器底色對齊 */
+body, html, .app-container,
+.main-detail, #view-accounts, #view-account-detail, #view-debt-tracker, #view-settings, #view-all-txs {
   background-color: var(--ios-bg) !important;
+  color: #1C1C1E;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", -apple-system-subheadline, "PingFang HK", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -41,9 +44,14 @@ html, body {
   height: 100%;
   height: 100dvh;
   overflow: hidden;
-  color: var(--text-main);
   display: flex;
   flex-direction: column;
+}
+
+/* 彈窗內容容器與抽屜底色 */
+.modal-content, .picker-drawer-content, .modal-card {
+  background-color: #FFFFFF !important;
+  border-radius: 20px;
 }
 
 /* 等寬數字設定 (小數點垂直對齊) */
@@ -265,6 +273,56 @@ body.hide-header header {
 .bal-negative { color: #E5484D !important; font-weight: 700; }
 .bal-zero     { color: #8E8E93 !important; font-weight: 600; }
 
+/* --- 6. 全域流水帳卡片排版 (對齊特定帳戶樣式) --- */
+.tx-card-item {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0.5px solid rgba(60, 60, 67, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.tx-card-item:active {
+  background-color: #F8F9FA;
+}
+
+.tx-icon-badge {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-right: 12px;
+  background-color: #F2F2F7;
+}
+
+.all-txs-sticky-search {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #F2F2F7;
+  padding: 10px 16px 8px 16px;
+}
+.all-txs-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  background: #FFFFFF;
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 12px;
+  padding: 0 12px 0 36px;
+  font-size: 14px;
+  outline: none;
+}
+
 /* 主視口與分頁 View */
 .app-main-viewport {
   flex: 1;
@@ -479,7 +537,7 @@ body.hide-header header {
 }
 .back-to-top-btn:hover { transform: translateY(-3px); }
 
-/* --- 6. 底部 iOS 毛玻璃 5 鍵 Tab Bar --- */
+/* --- 7. 底部 iOS 毛玻璃 5 鍵 Tab Bar (含中性相機按鈕) --- */
 .ios-tab-bar {
   position: fixed;
   bottom: 0;
@@ -529,6 +587,17 @@ body.hide-header header {
 
 .tab-item.active .tab-pill {
   background: #E5F2FF;
+}
+
+/* 相機按鈕中性化樣式 */
+.tab-action-camera .tab-pill {
+  background: #FFFFFF !important;
+  color: #1C1C1E !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.tab-action-camera:active .tab-pill {
+  background: #E5E5EA !important;
+  transform: scale(0.95);
 }
 
 @media (min-width: 769px) {
@@ -582,7 +651,6 @@ select:focus,
 
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; }
 
-/* 彈窗層級修復：確保快速還款/編輯彈窗層級高於歷史記錄彈窗 */
 #quick-repay-modal {
   z-index: 1200 !important;
 }

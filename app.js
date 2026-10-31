@@ -80,6 +80,7 @@ let currentMainTab = 'accounts';
 let previousActiveTab = 'accounts';
 let searchKeyword = '';
 let chartInstance = null;
+window.allTxSearchQuery = '';
 
 // =======================
 // 編輯模式狀態管理 (Edit Mode)
@@ -967,7 +968,6 @@ window.renderAccountsView = function() {
       headerRow.style.borderBottom = '0.5px solid #F0F1F5';
     }
 
-    // 點擊事件分流：編輯模式下直接打開編輯彈窗；平時則切換折疊
     headerRow.onclick = () => {
       if (window.isEditMode) {
         openEditGroupModal(grp.id);
@@ -1110,6 +1110,21 @@ window.switchMainTab = function(tabName) {
     const tabBtn = document.getElementById('tab-btn-all');
     if (tabBtn) tabBtn.classList.add('active');
     document.body.classList.add('hide-header');
+    
+    // 鏡射頂部 Net Worth 與 Sync 按鈕
+    const heroSlot = document.querySelector('.all-txs-hero-slot');
+    const mainHero = document.querySelector('.net-worth-box');
+    if (heroSlot && mainHero) {
+      heroSlot.innerHTML = '';
+      const clonedHero = mainHero.cloneNode(true);
+      clonedHero.onclick = () => openReportModal();
+      heroSlot.appendChild(clonedHero);
+    }
+
+    window.allTxSearchQuery = '';
+    const searchInput = document.getElementById('all-tx-search-input');
+    if (searchInput) searchInput.value = '';
+
     renderAllTransactionsView();
   } else if (tabName === 'settings') {
     document.getElementById('view-settings').style.display = 'flex';
@@ -1125,66 +1140,93 @@ window.switchMainTab = function(tabName) {
   }
 };
 
-// 渲染「🧾 全部」全域流水帳視圖
+window.handleAllTxSearch = function(e) {
+  window.allTxSearchQuery = (e.target.value || '').trim().toLowerCase();
+  renderAllTransactionsView();
+};
+
+function getCategoryVisual(catId, txType) {
+  const cat = categories.find(c => c.id === catId);
+  if (cat && cat.icon) return { icon: cat.icon, bg: '#F2F2F7' };
+  if (txType === 'transfer') return { icon: '🔁', bg: '#E3F2FD' };
+  if (txType === 'buy' || txType === 'sell') return { icon: '📈', bg: '#F3E8FF' };
+  if (txType === 'income') return { icon: '💰', bg: '#D8F3DC' };
+  return { icon: '📝', bg: '#F2F2F7' };
+}
+
+// 模組 3：重構 renderAllTransactionsView（月份 Header、Badge、卡片排版）
 window.renderAllTransactionsView = function() {
   const container = document.getElementById('all-transactions-list');
-  const heroSlot = document.querySelector('.all-txs-hero-slot');
   if (!container) return;
-
-  if (heroSlot) {
-    const mainNetWorth = document.querySelector('.net-worth-box');
-    if (mainNetWorth) {
-      heroSlot.innerHTML = mainNetWorth.outerHTML;
-    }
-  }
-
   container.innerHTML = '';
 
-  const sortedTxs = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const query = window.allTxSearchQuery || '';
 
-  if (sortedTxs.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">尚無任何交易紀錄</p>';
+  let filtered = transactions.filter(tx => {
+    if (!query) return true;
+    const d = (tx.date || '').split('T')[0];
+    const title = (tx.title || '').toLowerCase();
+    const note = (tx.note || '').toLowerCase();
+    const cat = categories.find(c => c.id === tx.categoryId);
+    const catName = cat ? cat.name.toLowerCase() : '';
+    return d.includes(query) || title.includes(query) || note.includes(query) || catName.includes(query);
+  });
+
+  filtered.sort((a, b) => new Date((b.date || '').split('T')[0]) - new Date((a.date || '').split('T')[0]));
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding: 40px 0; font-size:14px;">找不到相關交易紀錄</div>';
     return;
   }
 
-  let currentMonthKey = '';
-  let monthGroupDiv = null;
-
-  sortedTxs.forEach(tx => {
+  const monthGroups = {};
+  filtered.forEach(tx => {
     const dStr = (tx.date || '').split('T')[0];
-    const mKey = dStr.substring(0, 7);
+    const mKey = dStr.substring(0, 7) || '其他';
+    if (!monthGroups[mKey]) monthGroups[mKey] = [];
+    monthGroups[mKey].push(tx);
+  });
 
-    if (mKey !== currentMonthKey) {
-      currentMonthKey = mKey;
-      const mHeader = document.createElement('div');
-      mHeader.style.cssText = 'font-size:12px; font-weight:700; color:var(--text-muted); padding:16px 4px 6px 4px; text-transform:uppercase;';
-      mHeader.innerText = currentMonthKey;
-      container.appendChild(mHeader);
+  Object.keys(monthGroups).forEach(mKey => {
+    const groupTxs = monthGroups[mKey];
 
-      monthGroupDiv = document.createElement('div');
-      monthGroupDiv.style.cssText = 'background:#FFFFFF; border-radius:16px; padding:4px 16px; border:0.5px solid var(--border-light); margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02);';
-      container.appendChild(monthGroupDiv);
-    }
-
-    const cat = categories.find(c => c.id === tx.categoryId);
-    const catName = cat ? cat.name : (tx.type || '一般交易');
-    const amtNum = parseFloat(tx.amount || 0);
-    const isIncome = tx.type === 'income';
-
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:0.5px solid #F2F2F7; cursor:pointer;';
-    row.onclick = () => openTxPage(tx.id);
-
-    row.innerHTML = `
-      <div>
-        <div style="font-size:15px; font-weight:600; color:#1C1C1E;">${tx.title || '無標題'}</div>
-        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">${catName} • ${dStr}</div>
-      </div>
-      <div style="font-size:15px; font-weight:700; color:${isIncome ? '#2D6A4F' : '#1C1C1E'};">
-        ${isIncome ? '+' : '-'}${fmtCur(amtNum, baseCurrency)}
-      </div>
+    const mHeader = document.createElement('div');
+    mHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 14px 4px 8px 4px; font-size:12px; font-weight:700; color:#8E8E93;';
+    mHeader.innerHTML = `
+      <span>📅 ${mKey}</span>
+      <span>${groupTxs.length} 筆明細</span>
     `;
-    if (monthGroupDiv) monthGroupDiv.appendChild(row);
+    container.appendChild(mHeader);
+
+    groupTxs.forEach(tx => {
+      const dStr = (tx.date || '').split('T')[0];
+      const visual = getCategoryVisual(tx.categoryId, tx.type);
+      const cat = categories.find(c => c.id === tx.categoryId);
+      const catText = cat ? cat.name : (tx.type || '一般交易');
+      const amt = parseFloat(tx.amount || 0);
+      const isIncome = tx.type === 'income';
+      const balClass = isIncome ? 'bal-positive' : 'bal-negative';
+      const prefix = isIncome ? '+' : '-';
+
+      const card = document.createElement('div');
+      card.className = 'tx-card-item';
+      card.onclick = () => openTxPage(tx.id);
+
+      card.innerHTML = `
+        <div style="display:flex; align-items:center;">
+          <div class="tx-icon-badge" style="background-color: ${visual.bg};">${visual.icon}</div>
+          <div>
+            <div style="font-size:14.5px; font-weight:600; color:#1C1C1E;">${tx.title || '無標題'}</div>
+            <div style="font-size:11.5px; color:#8E8E93; margin-top:2px;">${catText} · ${dStr}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="${balClass}" style="font-size:14.5px;">${prefix}${fmtCur(amt, baseCurrency)}</span>
+          <span style="color:#C7C7CC; font-size:14px;">›</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
   });
 };
 
