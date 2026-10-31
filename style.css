@@ -30,12 +30,13 @@
   padding: 0; 
 }
 
-/* 全域子分頁與彈窗容器底色對齊 */
-body, html, .app-container,
-.main-detail, #view-accounts, #view-account-detail, #view-debt-tracker, #view-settings, #view-all-txs {
+/* 全域子分頁與彈窗強制對齊 iOS 冷灰底與字體 */
+*, body, html, .app-container, .main-detail,
+#view-accounts, #view-debts, #view-settings, #view-all-txs,
+#view-account-detail, #view-debt-tracker {
   background-color: var(--ios-bg) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", -apple-system-subheadline, "PingFang HK", sans-serif !important;
   color: #1C1C1E;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", -apple-system-subheadline, "PingFang HK", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -48,8 +49,9 @@ html, body {
   flex-direction: column;
 }
 
-/* 彈窗內容容器與抽屜底色 */
-.modal-content, .picker-drawer-content, .modal-card {
+/* 確保卡片與彈窗內部維持純白底色，不被全域灰底覆蓋 */
+.ios-group-card, .tx-card-item, .debt-card,
+.modal-content, .picker-drawer-content, .modal-card, .card-box {
   background-color: #FFFFFF !important;
   border-radius: 20px;
 }
@@ -249,7 +251,7 @@ body.hide-header header {
   border-bottom: none;
 }
 
-/* --- 5. 方案 A：36x36 圓角馬卡龍方塊 Badge --- */
+/* --- 5. 馬卡龍方塊 Badge --- */
 .group-macaron-badge {
   width: 36px;
   height: 36px;
@@ -268,16 +270,16 @@ body.hide-header header {
 .group-badge-purple { background-color: var(--macaron-purple); color: #603D82; }
 .group-badge-grey   { background-color: var(--macaron-grey);   color: #4B5563; }
 
-/* 結餘正綠負紅 */
+/* 結餘色彩規格（正綠、負紅、零元灰） */
 .bal-positive { color: #2D6A4F !important; font-weight: 700; }
 .bal-negative { color: #E5484D !important; font-weight: 700; }
 .bal-zero     { color: #8E8E93 !important; font-weight: 600; }
 
-/* --- 6. 全域流水帳卡片排版 (對齊特定帳戶樣式) --- */
+/* --- 6. 交易流水帳 1:1 還原樣式 --- */
 .tx-card-item {
-  background: #FFFFFF;
+  background: #FFFFFF !important;
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
@@ -288,7 +290,7 @@ body.hide-header header {
   transition: background-color 0.15s ease;
 }
 .tx-card-item:active {
-  background-color: #F8F9FA;
+  background-color: #F8F9FA !important;
 }
 
 .tx-icon-badge {
@@ -299,9 +301,19 @@ body.hide-header header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 17px;
   margin-right: 12px;
   background-color: #F2F2F7;
+}
+
+/* 分類標籤樣式：主分類 > 子分類 */
+.tx-cat-breadcrumb {
+  font-size: 11px;
+  color: #8E8E93;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .all-txs-sticky-search {
@@ -537,7 +549,7 @@ body.hide-header header {
 }
 .back-to-top-btn:hover { transform: translateY(-3px); }
 
-/* --- 7. 底部 iOS 毛玻璃 5 鍵 Tab Bar (含中性相機按鈕) --- */
+/* --- 7. 底部 iOS 毛玻璃 5 鍵 Tab Bar --- */
 .ios-tab-bar {
   position: fixed;
   bottom: 0;
@@ -589,15 +601,15 @@ body.hide-header header {
   background: #E5F2FF;
 }
 
-/* 相機按鈕中性化樣式 */
+/* 底部相機按鈕徹底去除選取圈圈 */
 .tab-action-camera .tab-pill {
-  background: #FFFFFF !important;
-  color: #1C1C1E !important;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 20px !important;
 }
 .tab-action-camera:active .tab-pill {
-  background: #E5E5EA !important;
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 @media (min-width: 769px) {
