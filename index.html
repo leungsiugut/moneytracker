@@ -44,7 +44,6 @@
         <div id="desktop-nav-dropdown" class="desktop-dropdown-menu" style="display: none;">
           <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">🪪 戶口主頁</button>
           <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">🚩 內部借貸</button>
-          <button type="button" onclick="switchMainTab('all-txs'); toggleDesktopMenu(false);">🧾 全部流水</button>
           <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">⚙️ 系統設定</button>
         </div>
       </div>
@@ -70,10 +69,10 @@
           </button>
         </div>
 
-        <div id="sidebar-accounts" style="display:flex; flex-direction:column;"></div>
+        <div id="account-groups-container" style="display:flex; flex-direction:column;"></div>
       </div>
 
-      <!-- 帳戶流水詳情視圖 (已移除相機按鈕) -->
+      <!-- 帳戶流水詳情視圖 -->
       <div class="main-detail" id="main-detail-scroll" onscroll="handleMainScroll(this)">
         <div class="sticky-control-panel">
           <div class="detail-header">
@@ -118,21 +117,7 @@
       <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
 
-    <!-- View 3: 「🧾 全部」全域流水帳平級視圖 -->
-    <div id="view-all-txs" class="main-page-view" style="display: none; height: 100%; overflow: hidden;">
-      <div class="all-txs-fixed-header" style="flex-shrink: 0;">
-        <div class="all-txs-hero-slot"></div>
-        <div class="all-txs-sticky-search">
-          <div style="position: relative; display: flex; align-items: center;">
-            <span style="position: absolute; left: 12px; font-size: 14px; color: #8E8E93;">🔍</span>
-            <input type="text" id="all-tx-search-input" class="all-txs-search-input" placeholder="搜尋交易商戶、分類、備註、日期..." oninput="handleAllTxSearch(event)">
-          </div>
-        </div>
-      </div>
-      <div id="all-transactions-list" style="flex: 1; overflow-y: auto; padding: 4px 16px 80px 16px;"></div>
-    </div>
-
-    <!-- View 4: 系統設定獨立 Page View -->
+    <!-- View 3: 系統設定獨立 Page View -->
     <div id="view-settings" class="main-page-view" style="display: none;">
       <div class="page-view-header">
         <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>
@@ -178,7 +163,7 @@
       </div>
     </div>
 
-    <!-- View 5: 新增 / 編輯交易獨立全螢幕 Page View -->
+    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View -->
     <div id="view-tx-form" class="main-page-view" style="display: none; background: var(--card-bg);">
       <div class="page-view-header">
         <button class="btn-back" type="button" onclick="closeTxPage()" style="display: inline-block;">‹ 取消</button>
@@ -298,14 +283,14 @@
 
   <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
 
-  <!-- 底部 iOS 5 鍵 Tab Bar（包含中性快捷拍照） -->
+  <!-- 底部 iOS 4 鍵 Tab Bar（已移除全部交易 Tab，保留中性純淨拍照鈕） -->
   <nav class="ios-tab-bar">
     <button class="tab-item active" id="tab-btn-accounts" type="button" onclick="switchMainTab('accounts')">
       <div class="tab-pill">🪪</div>
       <span>戶口</span>
     </button>
     
-    <!-- 拍照記帳快捷鍵 (中性白底) -->
+    <!-- 拍照記帳快捷鍵 (無框純淨圖標) -->
     <button class="tab-item tab-action-camera" type="button" onclick="triggerBottomCamera()">
       <div class="tab-pill">📷</div>
       <span>拍照</span>
@@ -314,11 +299,6 @@
     <button class="tab-item" id="tab-btn-debts" type="button" onclick="switchMainTab('debts')">
       <div class="tab-pill">🚩</div>
       <span>借貸</span>
-    </button>
-    
-    <button class="tab-item" id="tab-btn-all" type="button" onclick="switchMainTab('all-txs')">
-      <div class="tab-pill">🧾</div>
-      <span>全部</span>
     </button>
     
     <button class="tab-item" id="tab-btn-settings" type="button" onclick="switchMainTab('settings')">

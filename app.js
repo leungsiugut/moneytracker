@@ -80,7 +80,6 @@ let currentMainTab = 'accounts';
 let previousActiveTab = 'accounts';
 let searchKeyword = '';
 let chartInstance = null;
-window.allTxSearchQuery = '';
 
 // =======================
 // 編輯模式狀態管理 (Edit Mode)
@@ -937,9 +936,9 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 帳戶主頁分組渲染（支援編輯模式開關切換）
+// 帳戶主頁分組渲染（工整分組、等寬市值結餘、去除 acc.type 雜訊）
 window.renderAccountsView = function() {
-  const container = document.getElementById('sidebar-accounts');
+  const container = document.getElementById('account-groups-container');
   if (!container) return;
   container.innerHTML = '';
 
@@ -949,6 +948,7 @@ window.renderAccountsView = function() {
     const isCollapsed = collapsedGroups[grp.id] !== false;
     const grpAccounts = accounts.filter(a => a.groupId === grp.id);
 
+    // 依市值 (現金 + 股票持倉) 正確統計 Group 總額
     let grpTotal = 0;
     grpAccounts.forEach(acc => {
       const b = (typeof getAccountTotalValue === 'function') ? getAccountTotalValue(acc.id) : getAccountCashBalance(acc.id);
@@ -956,8 +956,6 @@ window.renderAccountsView = function() {
     });
 
     const grpIcon = (grp.icon && grp.icon.trim()) ? grp.icon.trim() : (typeof getGroupDefaultIcon === 'function' ? getGroupDefaultIcon(grp) : '📁');
-    const themeKey = (grp.theme || 'mint').toLowerCase();
-    const badgeClass = `group-badge-${themeKey}`;
     const balColorClass = getBalanceColorClass(grpTotal);
 
     const groupCard = document.createElement('div');
@@ -970,6 +968,7 @@ window.renderAccountsView = function() {
       headerRow.style.borderBottom = '0.5px solid #F0F1F5';
     }
 
+    // 點擊行為分流：編輯模式點擊直接彈出編輯彈窗，平常點擊則展開/收起
     headerRow.onclick = () => {
       if (window.isEditMode) {
         openEditGroupModal(grp.id);
@@ -979,42 +978,43 @@ window.renderAccountsView = function() {
     };
 
     headerRow.innerHTML = `
-      <div style="display:flex; align-items:center;">
-        <span style="font-size:10px; color:#8E8E93; width:14px;">${window.isEditMode ? '✎' : (isCollapsed ? '▶' : '▼')}</span>
-        <div class="group-macaron-badge ${badgeClass}">${grpIcon}</div>
-        <div style="font-size:15px; font-weight:700; color:#1C1C1E;">${grp.name}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:10px; color:#8E8E93; width:12px; text-align:center;">${window.isEditMode ? '✎' : (isCollapsed ? '▶' : '▼')}</span>
+        <span style="font-size:18px;">${grpIcon}</span>
+        <span style="font-size:15px; font-weight:700; color:#1C1C1E;">${grp.name}</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
-        <span class="${balColorClass}" style="font-size:15px;">${fmtCur(grpTotal, grp.currency || baseCurrency)}</span>
+        <span class="${balColorClass} group-bal-text" style="font-size:15px; font-feature-settings:'tnum' 1; font-variant-numeric:tabular-nums;">${fmtCur(grpTotal, grp.currency || baseCurrency)}</span>
       </div>
     `;
     groupCard.appendChild(headerRow);
 
+    // 展開後的 Account 清單
     const accList = document.createElement('div');
     accList.style.display = (isCollapsed || window.isEditMode) ? 'none' : 'block';
 
     if (grpAccounts.length === 0) {
       accList.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">此分組尚無帳戶</div>';
     } else {
-      grpAccounts.forEach((acc, idx) => {
+      grpAccounts.forEach((acc) => {
         const bal = (typeof getAccountTotalValue === 'function') ? getAccountTotalValue(acc.id) : getAccountCashBalance(acc.id);
         const itemBalClass = getBalanceColorClass(bal);
 
         const row = document.createElement('div');
-        row.className = 'acc-item-row';
-        if (idx === grpAccounts.length - 1) row.style.borderBottom = 'none';
+        row.className = 'group-account-item';
         row.onclick = (e) => {
           e.stopPropagation();
           selectAccount(acc.id);
         };
 
+        // 純淨只顯示帳戶名稱與結餘，徹底去除 acc.type 雜訊
         row.innerHTML = `
           <div>
-            <div style="font-size:15px; font-weight:600; color:#1C1C1E;">${acc.name}</div>
+            <div style="font-size:14.5px; font-weight:600; color:#1C1C1E;">${acc.name}</div>
           </div>
-          <div style="display:flex; align-items:center; gap:4px;">
-            <span class="${itemBalClass}" style="font-size:14px;">${fmtCur(bal, acc.currency)}</span>
-            <span style="color:#C7C7CC; font-size:14px; margin-left:2px;">›</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="${itemBalClass}" style="font-size:14px; font-feature-settings:'tnum' 1; font-variant-numeric:tabular-nums;">${fmtCur(bal, acc.currency)}</span>
+            <span style="color:#C7C7CC; font-size:14px;">›</span>
           </div>
         `;
         accList.appendChild(row);
@@ -1049,9 +1049,6 @@ window.renderApp = function() {
   if (typeof window.renderAccountsView === 'function') window.renderAccountsView();
   renderDetailView();
   if (window.renderDebtTrackerView) window.renderDebtTrackerView();
-  if (currentMainTab === 'all-txs' && typeof window.renderAllTransactionsView === 'function') {
-    window.renderAllTransactionsView();
-  }
   renderCategoryTree();
   updateSyncStatusUI();
 };
@@ -1083,19 +1080,17 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-// 切換主分頁（支援 🪪 戶口、🚩 借貸、🧾 全部、⚙️ 設定）
+// 切換主分頁（簡化版：僅保留 accounts / debts / settings）
 window.switchMainTab = function(tabName) {
   currentMainTab = tabName;
 
   const viewAccs = document.getElementById('view-accounts');
   const viewDebts = document.getElementById('view-debt-tracker') || document.getElementById('view-debts');
-  const viewAll = document.getElementById('view-all-txs');
   const viewSettings = document.getElementById('view-settings');
   const viewForm = document.getElementById('view-tx-form');
 
   if (viewAccs) viewAccs.style.display = 'none';
   if (viewDebts) viewDebts.style.display = 'none';
-  if (viewAll) viewAll.style.display = 'none';
   if (viewSettings) viewSettings.style.display = 'none';
   if (viewForm) viewForm.style.display = 'none';
 
@@ -1115,27 +1110,6 @@ window.switchMainTab = function(tabName) {
     if (tabBtn) tabBtn.classList.add('active');
     document.body.classList.add('hide-header');
     if (typeof window.renderDebtTrackerView === 'function') window.renderDebtTrackerView();
-  } else if (tabName === 'all-txs') {
-    if (viewAll) viewAll.style.display = 'flex';
-    const tabBtn = document.getElementById('tab-btn-all');
-    if (tabBtn) tabBtn.classList.add('active');
-    document.body.classList.add('hide-header');
-    
-    // 鏡射頂部 Net Worth 與 Sync 按鈕
-    const heroSlot = document.querySelector('.all-txs-hero-slot');
-    const mainHero = document.querySelector('.net-worth-box');
-    if (heroSlot && mainHero) {
-      heroSlot.innerHTML = '';
-      const clonedHero = mainHero.cloneNode(true);
-      clonedHero.onclick = () => { if (typeof openReportModal === 'function') openReportModal(); };
-      heroSlot.appendChild(clonedHero);
-    }
-
-    window.allTxSearchQuery = '';
-    const searchInput = document.getElementById('all-tx-search-input');
-    if (searchInput) searchInput.value = '';
-
-    if (typeof window.renderAllTransactionsView === 'function') window.renderAllTransactionsView();
   } else if (tabName === 'settings') {
     if (viewSettings) viewSettings.style.display = 'flex';
     const tabBtn = document.getElementById('tab-btn-settings');
@@ -1150,149 +1124,20 @@ window.switchMainTab = function(tabName) {
   }
 };
 
-window.handleAllTxSearch = function(e) {
-  window.allTxSearchQuery = (e.target.value || '').trim().toLowerCase();
-  if (typeof window.renderAllTransactionsView === 'function') {
-    window.renderAllTransactionsView();
-  }
-};
-
-function getCategoryVisual(catId, txType) {
-  const cat = categories.find(c => c.id === catId);
-  if (cat && cat.icon) return { icon: cat.icon, bg: '#F2F2F7' };
-  if (txType === 'transfer') return { icon: '🔁', bg: '#E3F2FD' };
-  if (txType === 'buy' || txType === 'sell') return { icon: '📈', bg: '#F3E8FF' };
-  if (txType === 'income') return { icon: '💰', bg: '#D8F3DC' };
-  return { icon: '📝', bg: '#F2F2F7' };
-}
-
-// 取得主類別與子類別名稱
-function getCategoryBreadcrumb(categoryId, txType) {
-  if (txType === 'transfer') return '轉帳';
-  if (txType === 'buy' || txType === 'sell') return '投資交易';
-  if (txType === 'adjust') return '餘額調整';
-  
-  if (typeof categories === 'undefined' || !Array.isArray(categories)) {
-    return txType === 'income' ? '收入' : '支出';
-  }
-
-  const cat = categories.find(c => c.id === categoryId);
-  if (!cat) return txType === 'income' ? '收入' : '支出';
-
-  if (cat.parentId) {
-    const parent = categories.find(c => c.id === cat.parentId);
-    if (parent) {
-      return `${parent.name} > ${cat.name}`;
-    }
-  }
-  return cat.name;
-}
-
-// 重構 renderAllTransactionsView（1:1 還原特定帳戶交易列，並修復點擊崩潰）
-window.renderAllTransactionsView = function() {
-  const container = document.getElementById('all-transactions-list');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const query = (window.allTxSearchQuery || '').trim().toLowerCase();
-
-  // 1. 過濾邏輯 (支援日期、商戶、分類、備註)
-  let filtered = transactions.filter(tx => {
-    if (!query) return true;
-    const d = (tx.date || '').split('T')[0];
-    const title = (tx.title || '').toLowerCase();
-    const note = (tx.note || '').toLowerCase();
-    const catBreadcrumb = getCategoryBreadcrumb(tx.categoryId, tx.type).toLowerCase();
-    return d.includes(query) || title.includes(query) || note.includes(query) || catBreadcrumb.includes(query);
-  });
-
-  filtered.sort((a, b) => new Date((b.date || '').split('T')[0]) - new Date((a.date || '').split('T')[0]));
-
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding: 40px 0; font-size:14px;">找不到相關交易紀錄</div>';
-    return;
-  }
-
-  // 2. 按月份分組
-  const monthGroups = {};
-  filtered.forEach(tx => {
-    const dStr = (tx.date || '').split('T')[0];
-    const mKey = dStr.substring(0, 7) || '其他';
-    if (!monthGroups[mKey]) monthGroups[mKey] = [];
-    monthGroups[mKey].push(tx);
-  });
-
-  // 3. 渲染月份區塊
-  Object.keys(monthGroups).forEach(mKey => {
-    const groupTxs = monthGroups[mKey];
-
-    const mHeader = document.createElement('div');
-    mHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 14px 4px 8px 4px; font-size:12px; font-weight:700; color:#8E8E93;';
-    mHeader.innerHTML = `
-      <span>📅 ${mKey}</span>
-      <span>${groupTxs.length} 筆明細</span>
-    `;
-    container.appendChild(mHeader);
-
-    groupTxs.forEach(tx => {
-      const dStr = (tx.date || '').split('T')[0];
-      const visual = (typeof getCategoryVisual === 'function') 
-        ? getCategoryVisual(tx.categoryId, tx.type) 
-        : { icon: '📝', bg: '#F2F2F7' };
-      const catBreadcrumb = getCategoryBreadcrumb(tx.categoryId, tx.type);
-      const amt = parseFloat(tx.amount || 0);
-      const isIncome = tx.type === 'income';
-      const balClass = isIncome ? 'bal-positive' : 'bal-negative';
-      const prefix = isIncome ? '+' : '-';
-
-      const card = document.createElement('div');
-      card.className = 'tx-card-item';
-      
-      // 修復點擊 Hang 機：以 try-catch 包裹，確保即使缺少 context 也能安全開啟編輯彈窗
-      card.onclick = (e) => {
-        e.stopPropagation();
-        try {
-          if (typeof window.openTxPage === 'function') {
-            window.openTxPage(tx.id);
-          } else if (typeof window.openTxModal === 'function') {
-            window.openTxModal(tx.id);
-          }
-        } catch (err) {
-          console.error('開啟編輯交易失敗：', err);
-        }
-      };
-
-      // 1:1 還原特定帳戶雙行排版 (上行商戶名、中行日期、下行 主類別 > 子類別)
-      card.innerHTML = `
-        <div style="display:flex; align-items:center;">
-          <div class="tx-icon-badge" style="background-color: ${visual.bg};">${visual.icon}</div>
-          <div>
-            <div style="font-size:14px; font-weight:600; color:#1C1C1E;">${tx.title || '無標題'}</div>
-            <div style="font-size:11px; color:#8E8E93; margin-top:2px;">${dStr}</div>
-            <div class="tx-cat-breadcrumb">${catBreadcrumb}</div>
-          </div>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span class="${balClass}" style="font-size:14px;">${prefix}${fmtCur(amt, baseCurrency)}</span>
-          <span style="color:#C7C7CC; font-size:14px;">›</span>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  });
-};
+// 徹底移除先前新增的全部流水帳函式（若有）
+delete window.renderAllTransactionsView;
+delete window.handleAllTxSearch;
+delete window.allTxSearchQuery;
 
 window.openTxPage = function(txId = null) {
   previousActiveTab = currentMainTab || 'accounts';
   
   const viewAccs = document.getElementById('view-accounts');
   const viewDebts = document.getElementById('view-debt-tracker') || document.getElementById('view-debts');
-  const viewAll = document.getElementById('view-all-txs');
   const viewSettings = document.getElementById('view-settings');
   
   if (viewAccs) viewAccs.style.display = 'none';
   if (viewDebts) viewDebts.style.display = 'none';
-  if (viewAll) viewAll.style.display = 'none';
   if (viewSettings) viewSettings.style.display = 'none';
   
   const tabBar = document.querySelector('.ios-tab-bar');
