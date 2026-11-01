@@ -82,6 +82,26 @@ let searchKeyword = '';
 let chartInstance = null;
 
 // =======================
+// 最近使用分類管理 (Recent Categories)
+// =======================
+function getRecentCategoryIds() {
+  try {
+    return JSON.parse(localStorage.getItem('wiz_recent_cat_ids')) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function recordRecentCategory(catId) {
+  if (!catId) return;
+  let recents = getRecentCategoryIds();
+  recents = recents.filter(id => id !== catId);
+  recents.unshift(catId);
+  recents = recents.slice(0, 5);
+  localStorage.setItem('wiz_recent_cat_ids', JSON.stringify(recents));
+}
+
+// =======================
 // 編輯模式狀態管理 (Edit Mode)
 // =======================
 window.isEditMode = false;
@@ -683,26 +703,28 @@ window.handleBottomCameraUpload = async function(event) {
   event.target.value = '';
 };
 
-// 截圖 OCR 辨識
+// ==========================================================================
+// Apple Wallet 截圖 OCR 雙保險與地圖雜訊過濾演算法
+// ==========================================================================
 window.handleOCRImageSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  updateSyncStatusUI('syncing', '正在 OCR 辨識截圖...');
+  updateSyncStatusUI('syncing', '正在辨識截圖...');
 
   try {
     const worker = await Tesseract.createWorker('eng');
     const ret = await worker.recognize(file);
     await worker.terminate();
 
-    const fullText = ret.data.text;
-    const lines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const fullText = ret.data.text || '';
+    const rawLines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
+    // 1. 提取金額 (支援 CA$108.99, $16.72, 108.99 等)
     let amount = '';
     let amtLineIdx = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      const match = lines[i].match(/(?:CA)?\$\s*(\d+[\.,]\d{2})/i);
+    for (let i = 0; i < rawLines.length; i++) {
+      const match = rawLines[i].match(/(?:CA)?\$\s*(\d+[\.,]\d{2})/i);
       if (match) {
         amount = match[1].replace(',', '.');
         amtLineIdx = i;
@@ -710,15 +732,63 @@ window.handleOCRImageSelected = async function(event) {
       }
     }
 
-    let guessedTitle = 'Wallet 交易';
-    if (amtLineIdx !== -1 && amtLineIdx + 1 < lines.length) {
-      let rawMerchant = lines[amtLineIdx + 1];
-      guessedTitle = rawMerchant.split(',')[0].trim();
-    } else {
-      const textLines = lines.filter(l => l.length > 2 && !l.includes('$') && !l.toLowerCase().includes('done'));
-      if (textLines.length > 0) guessedTitle = textLines[0].split(',')[0].trim();
+    // 2. 商戶名稱提取雜訊過濾輔助函式
+    const isNoise = (text) => {
+      if (!text || text.length < 2) return true;
+      // 排除全為斜線或無效符號 (例如 J A \ \)
+      if (/^[\\\/\|\sA-Za-z]{1,4}$/.test(text) && (text.includes('\\') || text.includes('/'))) return true;
+      // 排除 Apple Wallet 系統固定關鍵字與地圖雜訊字眼
+      const lower = text.toLowerCase();
+      const blackList = [
+        'apple card', 'apple pay', 'wealthsimple', 'approved', 'declined',
+        'status:', '狀態', '已批核', '總計', 'total', 'done', '完成',
+        'kennedy', 'avenue', 'ave', 'road', 'rd', 'blvd', 'street', 'st',
+        'church', 'baptist', 'report', 'incorrect', 'merchant', '聯絡', '報告'
+      ];
+      return blackList.some(k => lower.includes(k));
+    };
+
+    let guessedTitle = '';
+
+    // 【第一保險】：檢查金額行緊接的下一行 (如 "Susu Siam, Toronto, ON")
+    if (amtLineIdx !== -1 && amtLineIdx + 1 < rawLines.length) {
+      let candidate = rawLines[amtLineIdx + 1];
+      // 若帶有逗號 (如 Susu Siam, Toronto, ON)，取逗號前半部
+      candidate = candidate.split(',')[0].trim();
+      if (!isNoise(candidate)) {
+        guessedTitle = candidate;
+      }
     }
 
+    // 【第二保險】：若第一保險無效 (如被誤讀為 J A \ \)，定位地圖下方獨立單元格
+    // 尋找在「狀態 / 已批核」之後，且在「聯絡 / 報告」之前的獨立單行商戶
+    if (!guessedTitle || guessedTitle.length < 2) {
+      let statusSeen = false;
+      for (let i = 0; i < rawLines.length; i++) {
+        const line = rawLines[i];
+        if (line.includes('狀態') || line.includes('已批核') || line.toLowerCase().includes('status')) {
+          statusSeen = true;
+          continue;
+        }
+        if (statusSeen) {
+          if (line.includes('聯絡') || line.includes('報告') || line.toLowerCase().includes('contact')) {
+            break;
+          }
+          const cleaned = line.split(',')[0].trim();
+          if (!isNoise(cleaned) && cleaned.length >= 2) {
+            guessedTitle = cleaned;
+            break;
+          }
+        }
+      }
+    }
+
+    // 最終預設名稱
+    if (!guessedTitle) {
+      guessedTitle = 'Wallet 交易';
+    }
+
+    // 提取日期
     let guessedDate = new Date().toISOString().split('T')[0];
     const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
     if (dateMatch) {
@@ -727,26 +797,32 @@ window.handleOCRImageSelected = async function(event) {
 
     updateSyncStatusUI();
 
-    let targetAccId = currentAccountId;
-    if (!targetAccId && accounts.length > 0) {
+    // 智能預設帳戶 ID
+    let targetAccId = (typeof currentAccountId !== 'undefined') ? currentAccountId : null;
+    if (!targetAccId && typeof accounts !== 'undefined' && accounts.length > 0) {
       targetAccId = accounts[0].id;
     }
 
+    // 打開記帳全螢幕頁面並填入數據
     openTxPage(null);
     switchTxTab('expense');
 
-    if (amount) document.getElementById('tx-amount').value = amount;
-    if (guessedTitle) document.getElementById('tx-title').value = guessedTitle;
-    if (guessedDate) document.getElementById('tx-date').value = guessedDate;
+    const amtInput = document.getElementById('tx-amount');
+    const titleInput = document.getElementById('tx-title');
+    const dateInput = document.getElementById('tx-date');
+    const accSelect = document.getElementById('tx-from-acc');
 
-    const modalAccSelect = document.getElementById('tx-from-acc');
-    if (modalAccSelect && targetAccId) {
-      modalAccSelect.value = targetAccId;
+    if (amtInput && amount) amtInput.value = amount;
+    if (titleInput && guessedTitle) titleInput.value = guessedTitle;
+    if (dateInput && guessedDate) dateInput.value = guessedDate;
+
+    if (accSelect && targetAccId) {
+      accSelect.value = targetAccId;
       handleFromAccountChange();
     }
 
   } catch (err) {
-    console.error('OCR failed:', err);
+    console.error('OCR 解析失敗：', err);
     updateSyncStatusUI('error', 'OCR 辨識失敗');
     setTimeout(() => updateSyncStatusUI(), 3000);
     alert('截圖辨識未能成功，請直接手動輸入。');
@@ -936,7 +1012,7 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 帳戶主頁分組渲染（工整分組、等寬市值結餘、去除 acc.type 雜訊）
+// 帳戶主頁分組渲染
 window.renderAccountsView = function() {
   const container = document.getElementById('account-groups-container');
   if (!container) return;
@@ -948,7 +1024,6 @@ window.renderAccountsView = function() {
     const isCollapsed = collapsedGroups[grp.id] !== false;
     const grpAccounts = accounts.filter(a => a.groupId === grp.id);
 
-    // 依市值 (現金 + 股票持倉) 正確統計 Group 總額
     let grpTotal = 0;
     grpAccounts.forEach(acc => {
       const b = (typeof getAccountTotalValue === 'function') ? getAccountTotalValue(acc.id) : getAccountCashBalance(acc.id);
@@ -968,7 +1043,6 @@ window.renderAccountsView = function() {
       headerRow.style.borderBottom = '0.5px solid #F0F1F5';
     }
 
-    // 點擊行為分流：編輯模式點擊直接彈出編輯彈窗，平常點擊則展開/收起
     headerRow.onclick = () => {
       if (window.isEditMode) {
         openEditGroupModal(grp.id);
@@ -989,7 +1063,6 @@ window.renderAccountsView = function() {
     `;
     groupCard.appendChild(headerRow);
 
-    // 展開後的 Account 清單
     const accList = document.createElement('div');
     accList.style.display = (isCollapsed || window.isEditMode) ? 'none' : 'block';
 
@@ -1007,7 +1080,6 @@ window.renderAccountsView = function() {
           selectAccount(acc.id);
         };
 
-        // 純淨只顯示帳戶名稱與結餘，徹底去除 acc.type 雜訊
         row.innerHTML = `
           <div>
             <div style="font-size:14.5px; font-weight:600; color:#1C1C1E;">${acc.name}</div>
@@ -1080,7 +1152,6 @@ window.handleSearchInput = function(val) {
   renderDetailView();
 };
 
-// 切換主分頁（簡化版：僅保留 accounts / debts / settings）
 window.switchMainTab = function(tabName) {
   currentMainTab = tabName;
 
@@ -1124,10 +1195,99 @@ window.switchMainTab = function(tabName) {
   }
 };
 
-// 徹底移除先前新增的全部流水帳函式（若有）
 delete window.renderAllTransactionsView;
 delete window.handleAllTxSearch;
 delete window.allTxSearchQuery;
+
+// ==========================================================================
+// 分類選取器 (含 Recent 5 儲存與渲染)
+// ==========================================================================
+function selectCategoryFromPicker(cat) {
+  const catInput = document.getElementById('tx-category');
+  const catDisplay = document.getElementById('tx-cat-display-name');
+  if (catInput) catInput.value = cat.id;
+  if (catDisplay) catDisplay.innerText = `${cat.icon || '🏷️'} ${cat.name}`;
+
+  recordRecentCategory(cat.id);
+  closeModal('cat-picker-drawer');
+}
+
+window.openCatPicker = function() {
+  const searchInput = document.getElementById('cat-picker-search');
+  if (searchInput) searchInput.value = '';
+  renderPickerCategories(currentTxType, '');
+  openModal('cat-picker-drawer');
+};
+
+window.renderPickerCategories = function(flowType, keyword = '') {
+  const container = document.getElementById('cat-picker-list');
+  if (!container) return;
+  container.innerHTML = '';
+  const kw = (keyword || '').toLowerCase().trim();
+
+  // 若無輸入搜尋關鍵字，頂部優先渲染「最近使用 5 個分類」
+  if (!kw) {
+    const recentIds = getRecentCategoryIds();
+    const validRecents = recentIds
+      .map(id => categories.find(c => c.id === id && (c.flowType === flowType || !c.flowType)))
+      .filter(Boolean);
+
+    if (validRecents.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'recent-cats-section';
+      section.innerHTML = `<div class="recent-cats-title">⏱️ 最近使用</div>`;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'recent-cats-wrap';
+
+      validRecents.forEach(cat => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'recent-cat-chip';
+        chip.innerHTML = `<span>${cat.icon || '🏷️'}</span><span>${cat.name}</span>`;
+        chip.onclick = () => {
+          selectCategoryFromPicker(cat);
+        };
+        wrap.appendChild(chip);
+      });
+
+      section.appendChild(wrap);
+      container.appendChild(section);
+    }
+  }
+
+  // 下方完整樹狀分類清單
+  const parents = categories.filter(c => (!c.flowType || c.flowType === flowType) && !c.parentId);
+  parents.forEach(p => {
+    const children = categories.filter(c => c.parentId === p.id);
+    const matchedChildren = children.filter(ch => ch.name.toLowerCase().includes(kw));
+    const parentMatches = p.name.toLowerCase().includes(kw);
+
+    if (kw && !parentMatches && matchedChildren.length === 0) return;
+
+    const showChildren = kw ? matchedChildren : children;
+
+    const pHeader = document.createElement('div');
+    pHeader.style.cssText = 'font-size:11.5px; font-weight:700; color:#8E8E93; padding:10px 8px 4px 8px; text-transform:uppercase;';
+    pHeader.innerText = `${p.icon || '📁'} ${p.name}`;
+    container.appendChild(pHeader);
+
+    showChildren.forEach(ch => {
+      const row = document.createElement('div');
+      row.className = 'picker-cat-row';
+      row.style.cssText = 'display:flex; align-items:center; gap:10px; padding:10px 8px; border-radius:10px; cursor:pointer;';
+      row.innerHTML = `<span style="font-size:18px;">${ch.icon || '🏷️'}</span><span style="font-size:13.5px; font-weight:600; color:#1C1C1E;">${ch.name}</span>`;
+      row.onclick = () => {
+        selectCategoryFromPicker(ch);
+      };
+      container.appendChild(row);
+    });
+  });
+};
+
+window.filterPickerCategories = function(kw) {
+  renderPickerCategories(currentTxType, kw);
+};
 
 window.openTxPage = function(txId = null) {
   previousActiveTab = currentMainTab || 'accounts';
@@ -1674,65 +1834,6 @@ window.switchTxTab = function(type) {
     if (fExchange) fExchange.style.display = 'none';
     if (fCommission) fCommission.style.display = 'none';
   }
-};
-
-window.openCatPicker = function() {
-  const searchInput = document.getElementById('cat-picker-search');
-  if (searchInput) searchInput.value = '';
-  renderPickerCategories(currentTxType, '');
-  openModal('cat-picker-drawer');
-};
-
-window.renderPickerCategories = function(flowType, keyword = '') {
-  const container = document.getElementById('cat-picker-list');
-  if (!container) return;
-  container.innerHTML = '';
-  const kw = keyword.toLowerCase();
-
-  const currentFlow = (flowType === 'income') ? 'income' : 'expense';
-  const parents = categories.filter(c => c.flowType === currentFlow && !c.parentId);
-
-  parents.forEach(p => {
-    const children = categories.filter(c => c.parentId === p.id);
-    const matchedChildren = children.filter(ch => ch.name.toLowerCase().includes(kw));
-    const parentMatches = p.name.toLowerCase().includes(kw);
-
-    if (kw && !parentMatches && matchedChildren.length === 0) return;
-
-    const headerEl = document.createElement('div');
-    headerEl.className = 'picker-cat-header';
-    headerEl.innerHTML = `<span>${p.icon}</span><span>${p.name}</span>`;
-    
-    if (children.length === 0) {
-      headerEl.style.cursor = 'pointer';
-      headerEl.onclick = () => {
-        document.getElementById('tx-category').value = p.id;
-        document.getElementById('tx-cat-display-name').innerText = `${p.icon} ${p.name}`;
-        closeModal('cat-picker-drawer');
-      };
-      container.appendChild(headerEl);
-      return;
-    }
-
-    container.appendChild(headerEl);
-
-    const showChildren = kw ? (parentMatches ? children : matchedChildren) : children;
-    showChildren.forEach(ch => {
-      const row = document.createElement('div');
-      row.className = 'picker-cat-row child-indent';
-      row.innerHTML = `<span style="font-size:16px;">${ch.icon}</span><span style="font-size:13.5px; font-weight:600;">${ch.name}</span>`;
-      row.onclick = () => {
-        document.getElementById('tx-category').value = ch.id;
-        document.getElementById('tx-cat-display-name').innerText = `${ch.icon} ${p.name} > ${ch.name}`;
-        closeModal('cat-picker-drawer');
-      };
-      container.appendChild(row);
-    });
-  });
-};
-
-window.filterPickerCategories = function(kw) {
-  renderPickerCategories(currentTxType, kw);
 };
 
 function populateGroupedAccountSelect(selectEl, selectedId = null, excludeAccId = null) {
@@ -2405,13 +2506,13 @@ window.deleteCurrentAccount = function() {
 
 window.openGroupModal = function() {
   const modal = document.getElementById('group-modal');
-  if (!modal) return;
+  if (!modal) {
+    console.error('找不到 #group-modal 元素');
+    return;
+  }
   document.getElementById('group-id').value = '';
   document.getElementById('group-modal-title').innerText = '新增帳戶分組';
   document.getElementById('group-name').value = '';
-  
-  const iconInput = document.getElementById('group-icon');
-  if (iconInput) iconInput.value = '';
   
   const curSelect = document.getElementById('group-currency');
   if (curSelect) {
@@ -2433,9 +2534,6 @@ window.openEditGroupModal = function(grpId) {
   document.getElementById('group-modal-title').innerText = '編輯帳戶分組';
   document.getElementById('group-name').value = grp.name;
   
-  const iconInput = document.getElementById('group-icon');
-  if (iconInput) iconInput.value = grp.icon || '';
-
   const curSelect = document.getElementById('group-currency');
   if (curSelect) {
     curSelect.value = grp.currency || (typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');
@@ -2454,8 +2552,7 @@ window.saveGroup = function() {
   const name = document.getElementById('group-name').value.trim();
   const currency = document.getElementById('group-currency').value;
   const theme = document.getElementById('group-theme').value || 'pink';
-  const iconVal = document.getElementById('group-icon') ? document.getElementById('group-icon').value.trim() : '';
-
+  
   if (!name) {
     alert('請填寫分組名稱！');
     return;
@@ -2463,9 +2560,9 @@ window.saveGroup = function() {
   
   if (id) {
     const idx = groups.findIndex(g => g.id === id);
-    if (idx !== -1) groups[idx] = { ...groups[idx], name, currency, theme, icon: iconVal };
+    if (idx !== -1) groups[idx] = { ...groups[idx], name, currency, theme };
   } else {
-    groups.push({ id: 'grp-' + Date.now(), name, currency, theme, icon: iconVal });
+    groups.push({ id: 'grp-' + Date.now(), name, currency, theme });
   }
   
   closeModal('group-modal');
@@ -2485,9 +2582,9 @@ window.deleteCurrentGroup = function() {
   saveData();
 };
 
-// ==========================================
+// ==========================================================================
 // 底部安全初始化區塊
-// ==========================================
+// ==========================================================================
 try {
   if (typeof initCurrencyDropdowns === 'function') initCurrencyDropdowns();
   if (typeof updateFXRates === 'function') updateFXRates(typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');

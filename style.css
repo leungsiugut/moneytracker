@@ -225,7 +225,7 @@ body.hide-header header {
   user-select: none;
 }
 
-/* 展開後的 Account 行項 (具備清爽行距與底線) */
+/* 展開後的 Account 行項 */
 .group-account-item {
   display: flex;
   justify-content: space-between;
@@ -681,4 +681,49 @@ select:focus,
   body.mobile-view-detail header {
     display: none !important;
   }
+}
+
+/* ==========================================================================
+   最近使用分類 (Recent Categories) 樣式
+   ========================================================================== */
+.recent-cats-section {
+  padding: 10px 16px 12px 16px;
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+  margin-bottom: 8px;
+}
+
+.recent-cats-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8E8E93;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recent-cats-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recent-cat-chip {
+  background: #F2F2F7 !important;
+  border: 0.5px solid rgba(60, 60, 67, 0.12) !important;
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1C1C1E;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.recent-cat-chip:active {
+  background: #E5E5EA !important;
+  transform: scale(0.96);
 }
