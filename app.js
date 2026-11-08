@@ -727,12 +727,6 @@ function getAccountCashBalance(accId) {
       }
     }
 
-    if (t.type === 'buy' && t.accountId === accId) {
-      balance -= (Number(t.amount) + (Number(t.commission) || 0));
-    }
-    if (t.type === 'sell' && t.accountId === accId) {
-      balance -= (Number(t.amount) - (Number(t.commission) || 0));
-    }
     if (t.type === 'dividend' && t.accountId === accId) balance += Number(t.amount);
   });
 
