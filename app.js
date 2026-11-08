@@ -69,7 +69,13 @@ let accounts = JSON.parse(localStorage.getItem('wiz_accs_cloud')) || DEFAULT_ACC
 let transactions = JSON.parse(localStorage.getItem('wiz_txs_cloud')) || [];
 let stockPriceCache = JSON.parse(localStorage.getItem('wiz_stock_cache_cloud')) || { 'HXT.TO': 98.50, 'AAPL': 225.00 };
 
-let collapsedGroups = JSON.parse(localStorage.getItem('wiz_collapsed_groups')) || {};
+// 確保讀取本機記錄，若無則預設為空物件
+let collapsedGroups = {};
+try {
+  collapsedGroups = JSON.parse(localStorage.getItem('wiz_collapsed_groups')) || {};
+} catch (e) {
+  collapsedGroups = {};
+}
 let collapsedCatParents = JSON.parse(localStorage.getItem('wiz_collapsed_cats')) || {};
 
 let currentAccountId = accounts.length > 0 ? accounts[0].id : null;
@@ -149,34 +155,57 @@ function updateSyncStatusUI(customState = null, msg = null) {
   const btn = document.getElementById('btn-manual-sync');
   const icon = document.getElementById('sync-icon');
   const text = document.getElementById('sync-text');
-  if (!btn || !icon || !text) return;
+  const dot = document.getElementById('detail-sync-dot');
 
   const pending = getPendingUploads();
+  let state = 'synced';
+  let message = '已同步';
 
   if (customState === 'syncing') {
-    btn.className = 'sync-status syncing';
-    icon.innerText = '🔄';
-    text.innerText = msg || '正在同步...';
-    return;
-  }
-
-  if (customState === 'error') {
-    btn.className = 'sync-status error';
-    icon.innerText = '⚠️';
-    text.innerText = msg || '同步失敗';
-    return;
-  }
-
-  if (pending.length > 0) {
-    btn.className = 'sync-status pending-sync';
-    icon.innerText = '🟠';
-    text.innerText = `未同步 (${pending.length} 筆待上傳)`;
+    state = 'syncing';
+    message = msg || '正在同步...';
+    if (btn && icon && text) {
+      btn.className = 'sync-status syncing';
+      icon.innerText = '🔄';
+      text.innerText = message;
+    }
+  } else if (customState === 'error') {
+    state = 'error';
+    message = msg || '同步失敗';
+    if (btn && icon && text) {
+      btn.className = 'sync-status error';
+      icon.innerText = '⚠️';
+      text.innerText = message;
+    }
+  } else if (pending.length > 0) {
+    state = 'pending';
+    message = `未同步 (${pending.length} 筆待上傳)`;
+    if (btn && icon && text) {
+      btn.className = 'sync-status pending-sync';
+      icon.innerText = '🟠';
+      text.innerText = message;
+    }
   } else {
-    btn.className = 'sync-status synced';
-    icon.innerText = '☁️';
-    text.innerText = '已同步';
+    state = 'synced';
+    message = '已同步';
+    if (btn && icon && text) {
+      btn.className = 'sync-status synced';
+      icon.innerText = '☁️';
+      text.innerText = message;
+    }
+  }
+
+  // 聯動驅動帳戶詳情頁頂部的純狀態小圓點指示燈
+  if (dot) {
+    dot.className = `sync-dot-indicator ${state}`;
+    const titles = { synced: '已同步', syncing: '同步中...', pending: '離線暫存', error: '連線異常' };
+    dot.title = titles[state] || state;
   }
 }
+
+window.setSyncStatus = function(status, msg) {
+  updateSyncStatusUI(status, msg);
+};
 
 // 電腦版選單控制
 window.toggleDesktopMenu = function(forceState = null) {
@@ -464,230 +493,6 @@ function normalizeDateString(dateStr) {
   return dateStr;
 }
 
-window.handleCSVFileSelected = function(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      let text = e.target.result;
-      if (!text) return;
-
-      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-      text = text.replace(/^sep=[^\r\n]*[\r\n]+/i, '');
-
-      const parsedData = parseCSVNative(text);
-      if (!parsedData || parsedData.length <= 1) {
-        alert('CSV 解析後沒有足夠的資料列！');
-        return;
-      }
-      processMoneyWizCSVNative(parsedData);
-    } catch (err) {
-      alert('解析處理時發生錯誤：' + err.message);
-    } finally {
-      event.target.value = '';
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
-};
-
-function parseCSVNative(text) {
-  const lines = [];
-  let row = [];
-  let col = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const next = text[i + 1];
-
-    if (c === '"') {
-      if (inQuotes && next === '"') { col += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (c === ',' && !inQuotes) {
-      row.push(col.trim()); col = '';
-    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-      if (c === '\r' && next === '\n') i++;
-      row.push(col.trim());
-      if (row.some(f => f.length > 0)) lines.push(row);
-      row = []; col = '';
-    } else {
-      col += c;
-    }
-  }
-  if (col.length > 0 || row.length > 0) {
-    row.push(col.trim());
-    if (row.some(f => f.length > 0)) lines.push(row);
-  }
-  return lines;
-}
-
-function processMoneyWizCSVNative(grid) {
-  const headers = grid[0].map(h => h.trim().toLowerCase());
-  function findIndex(patterns) {
-    return headers.findIndex(h => patterns.some(p => h.includes(p)));
-  }
-
-  const idxName = findIndex(['name']);
-  const idxAcc = findIndex(['account']);
-  const idxTransfer = findIndex(['transfers', 'transfer']);
-  const idxDate = findIndex(['date']);
-  const idxAmt = findIndex(['amount']);
-  const idxCat = findIndex(['category']);
-  const idxPayee = findIndex(['payee', 'description']);
-  const idxCur = findIndex(['currency']);
-
-  if (idxDate === -1 || idxAmt === -1) {
-    alert('未能對齊欄位！\nHeaders 為：\n' + grid[0].join(' | '));
-    return;
-  }
-
-  let importedCount = 0;
-  let defaultGroup = groups[0] || { id: 'grp-1', name: 'General', theme: 'mint', currency: 'CAD' };
-  let currentParsedAccount = null;
-
-  function getOrCreateAccount(accName, curVal = 'CAD', isDefaultCredit = false) {
-    accName = accName.replace(/\?/g, ' ').replace(/\s+/g, ' ').trim();
-    let acc = accounts.find(a => a.name.toLowerCase() === accName.toLowerCase());
-    if (!acc) {
-      const isCredit = isDefaultCredit || accName.toLowerCase().includes('visa') || accName.toLowerCase().includes('card');
-      acc = {
-        id: 'acc-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-        name: accName,
-        groupId: defaultGroup.id,
-        type: isCredit ? 'credit' : 'checking',
-        currency: curVal || 'CAD',
-        initialBalance: 0
-      };
-      accounts.push(acc);
-    }
-    return acc;
-  }
-
-  for (let i = 1; i < grid.length; i++) {
-    const row = grid[i];
-    if (!row || row.length === 0) continue;
-
-    const rawAmt = row[idxAmt] || '';
-    const amtClean = parseFloat(rawAmt.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(amtClean)) continue;
-
-    const rawDate = row[idxDate] || '';
-    if (!rawDate) continue;
-    const txDate = normalizeDateString(rawDate);
-
-    let curVal = 'CAD';
-    if (idxCur !== -1 && row[idxCur]) {
-      const match = row[idxCur].toString().toUpperCase().match(/[A-Z]{3}/);
-      if (match) curVal = match[0];
-    }
-
-    let accName = '';
-    if (idxAcc !== -1 && row[idxAcc]) accName = row[idxAcc].trim();
-    if (!accName && idxName !== -1 && row[idxName]) accName = row[idxName].trim();
-
-    if (accName) {
-      currentParsedAccount = accName;
-    } else if (currentParsedAccount) {
-      accName = currentParsedAccount;
-    } else {
-      accName = 'Imported Account';
-    }
-
-    const mainAcc = getOrCreateAccount(accName, curVal, amtClean < 0);
-
-    const transferTargetRaw = idxTransfer !== -1 ? (row[idxTransfer] || '').trim() : '';
-    if (transferTargetRaw) {
-      const transferAcc = getOrCreateAccount(transferTargetRaw, curVal, false);
-      const isExpense = amtClean < 0;
-
-      transactions.push({
-        id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000000),
-        type: isExpense ? 'expense' : 'income',
-        accountId: mainAcc.id,
-        amount: Math.abs(amtClean),
-        currency: curVal,
-        title: isExpense ? `轉帳至 ${transferAcc.name}` : `由 ${transferAcc.name} 轉入`,
-        categoryId: null,
-        date: txDate,
-        isPending: false
-      });
-      importedCount++;
-      continue;
-    }
-
-    let rawCat = idxCat !== -1 ? (row[idxCat] || '').trim() : '';
-    let finalCatId = null;
-    let subCatName = '';
-
-    if (rawCat) {
-      const catParts = rawCat.split('>').map(s => s.trim()).filter(s => s.length > 0);
-      if (catParts.length > 0) {
-        const parentName = catParts[0];
-        const isIncome = amtClean > 0;
-        const flowType = isIncome ? 'income' : 'expense';
-
-        let parentCat = categories.find(c => c.name.toLowerCase() === parentName.toLowerCase() && !c.parentId);
-        if (!parentCat) {
-          parentCat = {
-            id: 'cat-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-            flowType: flowType,
-            name: parentName,
-            icon: isIncome ? '💰' : '🏷️',
-            parentId: null
-          };
-          categories.push(parentCat);
-        }
-        finalCatId = parentCat.id;
-
-        if (catParts.length > 1 && catParts[1]) {
-          subCatName = catParts[1];
-          let childCat = categories.find(c => c.name.toLowerCase() === subCatName.toLowerCase() && c.parentId === parentCat.id);
-          if (!childCat) {
-            childCat = {
-              id: 'cat-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-              flowType: flowType,
-              name: subCatName,
-              icon: '🔹',
-              parentId: parentCat.id
-            };
-            categories.push(childCat);
-          }
-          finalCatId = childCat.id;
-        }
-      }
-    }
-
-    let payeeRaw = idxPayee !== -1 ? (row[idxPayee] || '').replace(/"/g, '').trim() : '';
-    if (!payeeRaw) {
-      payeeRaw = subCatName || (rawCat.split('>')[0] || (amtClean < 0 ? '日常支出' : '日常收入')).trim();
-    }
-
-    transactions.push({
-      id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000000),
-      type: amtClean < 0 ? 'expense' : 'income',
-      accountId: mainAcc.id,
-      amount: Math.abs(amtClean),
-      currency: curVal,
-      title: payeeRaw,
-      categoryId: finalCatId,
-      date: txDate,
-      isPending: false
-    });
-
-    importedCount++;
-  }
-
-  if (importedCount > 0) {
-    currentAccountId = accounts[0].id;
-    saveData();
-    alert(`成功匯入 ${importedCount} 筆 MoneyWiz 歷史交易！✨\n已依 MoneyWiz 原裝邏輯完整還原每筆流水帳。`);
-  } else {
-    alert('未能在 CSV 中讀取到任何有效交易列！');
-  }
-}
-
 // 底部拍照按鈕喚起與處理
 window.triggerBottomCamera = function() {
   const fileInput = document.getElementById('bottom-camera-input');
@@ -735,9 +540,7 @@ window.handleOCRImageSelected = async function(event) {
     // 2. 商戶名稱提取雜訊過濾輔助函式
     const isNoise = (text) => {
       if (!text || text.length < 2) return true;
-      // 排除全為斜線或無效符號 (例如 J A \ \)
       if (/^[\\\/\|\sA-Za-z]{1,4}$/.test(text) && (text.includes('\\') || text.includes('/'))) return true;
-      // 排除 Apple Wallet 系統固定關鍵字與地圖雜訊字眼
       const lower = text.toLowerCase();
       const blackList = [
         'apple card', 'apple pay', 'wealthsimple', 'approved', 'declined',
@@ -750,18 +553,16 @@ window.handleOCRImageSelected = async function(event) {
 
     let guessedTitle = '';
 
-    // 【第一保險】：檢查金額行緊接的下一行 (如 "Susu Siam, Toronto, ON")
+    // 【第一保險】：檢查金額行緊接的下一行
     if (amtLineIdx !== -1 && amtLineIdx + 1 < rawLines.length) {
       let candidate = rawLines[amtLineIdx + 1];
-      // 若帶有逗號 (如 Susu Siam, Toronto, ON)，取逗號前半部
       candidate = candidate.split(',')[0].trim();
       if (!isNoise(candidate)) {
         guessedTitle = candidate;
       }
     }
 
-    // 【第二保險】：若第一保險無效 (如被誤讀為 J A \ \)，定位地圖下方獨立單元格
-    // 尋找在「狀態 / 已批核」之後，且在「聯絡 / 報告」之前的獨立單行商戶
+    // 【第二保險】：定位「狀態 / 已批核」之後，且在「聯絡 / 報告」之前的獨立單行商戶
     if (!guessedTitle || guessedTitle.length < 2) {
       let statusSeen = false;
       for (let i = 0; i < rawLines.length; i++) {
@@ -783,12 +584,10 @@ window.handleOCRImageSelected = async function(event) {
       }
     }
 
-    // 最終預設名稱
     if (!guessedTitle) {
       guessedTitle = 'Wallet 交易';
     }
 
-    // 提取日期
     let guessedDate = new Date().toISOString().split('T')[0];
     const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
     if (dateMatch) {
@@ -797,13 +596,11 @@ window.handleOCRImageSelected = async function(event) {
 
     updateSyncStatusUI();
 
-    // 智能預設帳戶 ID
     let targetAccId = (typeof currentAccountId !== 'undefined') ? currentAccountId : null;
     if (!targetAccId && typeof accounts !== 'undefined' && accounts.length > 0) {
       targetAccId = accounts[0].id;
     }
 
-    // 打開記帳全螢幕頁面並填入數據
     openTxPage(null);
     switchTxTab('expense');
 
@@ -877,6 +674,7 @@ window.refreshLiveStockPrices = async function() {
   }
 };
 
+// 嚴格維持原版穩定計算，絕不扣除 buy/sell
 function getAccountCashBalance(accId) {
   const acc = accounts.find(a => a.id === accId);
   if (!acc) return 0;
@@ -928,12 +726,6 @@ function getAccountCashBalance(accId) {
       }
     }
 
-    if (t.type === 'buy' && t.accountId === accId) {
-      balance -= (Number(t.amount) + (Number(t.commission) || 0));
-    }
-    if (t.type === 'sell' && t.accountId === accId) {
-      balance += (Number(t.amount) - (Number(t.commission) || 0));
-    }
     if (t.type === 'dividend' && t.accountId === accId) balance += Number(t.amount);
   });
 
@@ -1012,7 +804,7 @@ function getAccountTotalValue(accId) {
   return cash;
 }
 
-// 帳戶主頁分組渲染
+// 帳戶主頁分組渲染：重構折疊初始化判定，確保預設全部收起
 window.renderAccountsView = function() {
   const container = document.getElementById('account-groups-container');
   if (!container) return;
@@ -1021,7 +813,8 @@ window.renderAccountsView = function() {
   if (typeof collapsedGroups === 'undefined') window.collapsedGroups = {};
 
   groups.forEach(grp => {
-    const isCollapsed = collapsedGroups[grp.id] !== false;
+    // 嚴格預設折疊：只有用戶手動展開過 (明確存為 false) 才展開，其餘預設折疊 (true)
+    const isCollapsed = collapsedGroups[grp.id] === false ? false : true;
     const grpAccounts = accounts.filter(a => a.groupId === grp.id);
 
     let grpTotal = 0;
@@ -1100,7 +893,7 @@ window.renderAccountsView = function() {
 
 window.toggleGroupCollapse = function(grpId) {
   if (typeof collapsedGroups === 'undefined') window.collapsedGroups = {};
-  const currentState = collapsedGroups[grpId] !== false;
+  const currentState = collapsedGroups[grpId] === false ? false : true;
   collapsedGroups[grpId] = !currentState;
   localStorage.setItem('wiz_collapsed_groups', JSON.stringify(collapsedGroups));
   renderAccountsView();
@@ -1225,7 +1018,6 @@ window.renderPickerCategories = function(flowType, keyword = '') {
   container.innerHTML = '';
   const kw = (keyword || '').toLowerCase().trim();
 
-  // 若無輸入搜尋關鍵字，頂部優先渲染「最近使用 5 個分類」
   if (!kw) {
     const recentIds = getRecentCategoryIds();
     const validRecents = recentIds
@@ -1256,7 +1048,6 @@ window.renderPickerCategories = function(flowType, keyword = '') {
     }
   }
 
-  // 下方完整樹狀分類清單
   const parents = categories.filter(c => (!c.flowType || c.flowType === flowType) && !c.parentId);
   parents.forEach(p => {
     const children = categories.filter(c => c.parentId === p.id);
@@ -2582,9 +2373,7 @@ window.deleteCurrentGroup = function() {
   saveData();
 };
 
-// ==========================================================================
 // 底部安全初始化區塊
-// ==========================================================================
 try {
   if (typeof initCurrencyDropdowns === 'function') initCurrencyDropdowns();
   if (typeof updateFXRates === 'function') updateFXRates(typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');
