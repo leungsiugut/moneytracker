@@ -83,10 +83,15 @@
                 <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
               </div>
             </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
+            <!-- 帳戶明細頂部動作列：新增純狀態同步指示燈 -->
+            <div style="display: flex; gap: 8px; align-items: center;">
               <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
-              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
               <button class="btn-action" onclick="openTxPage(null)" title="記一筆">＋</button>
+              
+              <!-- 新增：純狀態同步燈 (無字純色展示) -->
+              <div id="detail-sync-dot" class="sync-dot-indicator synced" title="已同步"></div>
+              
+              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="編輯帳戶">✏️</button>
             </div>
           </div>
 
@@ -117,7 +122,7 @@
       <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
 
-    <!-- View 3: 系統設定獨立 Page View -->
+    <!-- View 3: 系統設定獨立 Page View (已徹底移除 MoneyWiz CSV Import) -->
     <div id="view-settings" class="main-page-view" style="display: none;">
       <div class="page-view-header">
         <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>
@@ -141,15 +146,6 @@
         </div>
 
         <div class="settings-card">
-          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">數據管理</label>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
-            <span style="font-size: 13.5px; font-weight: 500;">匯入 MoneyWiz 歷史交易 CSV</span>
-            <input type="file" id="mw-csv-file" accept=".csv" style="display: none;" onchange="handleCSVFileSelected(event)">
-            <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('mw-csv-file').click()">📂 匯入 CSV</button>
-          </div>
-        </div>
-
-        <div class="settings-card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">分類維護清單</label>
             <button class="btn-action" style="padding: 4px 10px; font-size: 11px;" onclick="openAddCategoryModal(null)">+ 新增父類別</button>
@@ -163,7 +159,7 @@
       </div>
     </div>
 
-    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View -->
+    <!-- View 4: 新增 / 編輯交易獨立全螢幕 Page View (支援 Expense 外幣自選折算) -->
     <div id="view-tx-form" class="main-page-view" style="display: none; background: var(--card-bg);">
       <div class="page-view-header">
         <button class="btn-back" type="button" onclick="closeTxPage()" style="display: inline-block;">‹ 取消</button>
@@ -214,12 +210,39 @@
           </div>
         </div>
 
+        <!-- 金額輸入行 (含 Expense 幣種選單) -->
         <div class="form-group" id="f-group-amount">
-          <label id="label-amount">金額</label>
-          <input type="number" step="0.01" id="tx-amount" placeholder="0.00">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label id="label-amount">金額</label>
+            <select id="tx-expense-currency" class="capsule-select" onchange="handleExpenseCurrencyChange()">
+              <!-- JS 動態注入幣種 -->
+            </select>
+          </div>
+          <input type="number" step="any" id="tx-amount" placeholder="0.00" oninput="handleExpenseAmountInput('base')">
         </div>
 
-        <div id="f-group-exchange" style="display: none; display: flex; flex-direction: column; gap: 12px;">
+        <!-- 外幣消費專用欄位 (選取非帳戶本幣時動態展開) -->
+        <div id="f-group-foreign-expense" style="display: none; flex-direction: column; gap: 10px; background: #F8F9FA; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 0.5px solid rgba(60,60,67,0.12);">
+          <div class="form-group">
+            <label id="label-foreign-amount" style="font-size: 11.5px; font-weight: 700; color: #8E8E93;">外幣金額</label>
+            <input type="number" step="any" id="tx-foreign-amount" placeholder="0.00" oninput="handleExpenseAmountInput('foreign')">
+          </div>
+          
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 700; color: #8E8E93;">匯率 (Rate: 1 外幣 = ? 帳戶本幣)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" step="0.0001" id="tx-foreign-rate" placeholder="0.0000" style="flex: 1;" oninput="handleExpenseRateInput()">
+              <button type="button" class="btn-action btn-secondary" onclick="fetchLiveExpenseFX()" style="font-size: 11px; height: 36px; padding: 0 10px;">🌐 即時匯率</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 700; color: #8E8E93;">手續費 (Commission / FTF - 可選)</label>
+            <input type="number" step="0.01" id="tx-expense-commission" placeholder="0.00">
+          </div>
+        </div>
+
+        <div id="f-group-exchange" style="display: none; flex-direction: column; gap: 12px;">
           <div class="form-group">
             <label id="label-from-amount">轉出金額</label>
             <input type="number" step="0.01" id="tx-from-amount" placeholder="0.00" oninput="handleExchangeInput('from')">
@@ -242,7 +265,7 @@
           <input type="number" step="0.01" id="tx-commission" placeholder="0.00">
         </div>
 
-        <div id="f-group-stock" style="display: none; display: flex; flex-direction: column; gap: 12px;">
+        <div id="f-group-stock" style="display: none; flex-direction: column; gap: 12px;">
           <div class="form-group">
             <label>股票代號</label>
             <div style="display: flex; gap: 8px;">
@@ -283,7 +306,7 @@
 
   <button class="back-to-top-btn" id="btn-back-to-top" onclick="scrollToTop()" title="回到頂部">↑</button>
 
-  <!-- 底部 iOS 4 鍵 Tab Bar（已移除全部交易 Tab，保留中性純淨拍照鈕） -->
+  <!-- 底部 iOS 4 鍵 Tab Bar -->
   <nav class="ios-tab-bar">
     <button class="tab-item active" id="tab-btn-accounts" type="button" onclick="switchMainTab('accounts')">
       <div class="tab-pill">🪪</div>

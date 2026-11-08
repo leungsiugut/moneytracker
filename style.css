@@ -154,6 +154,37 @@ body.hide-header header {
   border: 1px solid rgba(217, 119, 6, 0.3) !important;
 }
 
+/* 帳戶明細頂部純狀態圓點 */
+.sync-dot-indicator {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  transition: all 0.25s ease;
+}
+.sync-dot-indicator.synced  { background-color: #2D6A4F; box-shadow: 0 0 4px rgba(45, 106, 79, 0.4); }
+.sync-dot-indicator.syncing { background-color: #D97706; animation: pulse 1s infinite; }
+.sync-dot-indicator.pending { background-color: #F97316; }
+.sync-dot-indicator.error   { background-color: #E5484D; }
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.6; }
+}
+
+/* 簡約膠囊選單樣式 */
+.capsule-select {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(60, 60, 67, 0.15);
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #1C1C1E;
+  outline: none;
+}
+
 /* 電腦版導覽選單 */
 @media (max-width: 768px) {
   .desktop-menu-container {
@@ -285,7 +316,7 @@ body.hide-header header {
 }
 
 /* ==========================================================================
-   36x36 圓角馬卡龍底座 Badge (取代裸體 Emoji)
+   36x36 圓角馬卡龍底座 Badge
    ========================================================================== */
 .icon-badge, .group-macaron-badge {
   width: 36px !important;
@@ -621,7 +652,7 @@ body.hide-header header {
 
 /* ==========================================================================
    底部 4 鍵 Tab Bar 與相機 Icon 去圈
-   ========================================================================== */
+   ========================================================================= */
 .ios-tab-bar {
   position: fixed;
   bottom: 0;
