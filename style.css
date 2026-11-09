@@ -154,27 +154,6 @@ body.hide-header header {
   border: 1px solid rgba(217, 119, 6, 0.3) !important;
 }
 
-/* --- 帳戶明細頂部純狀態圓點指示燈 --- */
-.sync-dot-indicator {
-  width: 9px;
-  height: 9px;
-  min-width: 9px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-left: 2px;
-  transition: all 0.25s ease;
-}
-.sync-dot-indicator.synced  { background-color: #2D6A4F; box-shadow: 0 0 4px rgba(45, 106, 79, 0.4); }
-.sync-dot-indicator.syncing { background-color: #D97706; animation: pulseSync 1s infinite; }
-.sync-dot-indicator.pending { background-color: #F97316; }
-.sync-dot-indicator.error   { background-color: #E5484D; }
-
-@keyframes pulseSync {
-  0% { transform: scale(0.9); opacity: 0.6; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.6; }
-}
-
 /* 電腦版導覽選單 */
 @media (max-width: 768px) {
   .desktop-menu-container {
@@ -306,7 +285,7 @@ body.hide-header header {
 }
 
 /* ==========================================================================
-   36x36 圓角馬卡龍底座 Badge
+   36x36 圓角馬卡龍底座 Badge (取代裸體 Emoji)
    ========================================================================== */
 .icon-badge, .group-macaron-badge {
   width: 36px !important;
