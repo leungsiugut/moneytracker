@@ -83,12 +83,11 @@
                 <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
               </div>
             </div>
-            <!-- 帳戶明細頂部動作列：同步指示燈置於 ✏️ 編輯按鈕右手邊 -->
+            <!-- 明細頁頂部按鈕：同步指示燈置於 ✏️ 編輯按鈕右手邊 -->
             <div style="display: flex; gap: 8px; align-items: center;">
               <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
               <button class="btn-action" onclick="openTxPage(null)" title="記一筆">＋</button>
-              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="編輯帳戶">✏️</button>
-              <!-- 純色狀態同步指示燈 (無字展示) -->
+              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
               <div id="detail-sync-dot" class="sync-dot-indicator synced" title="已同步"></div>
             </div>
           </div>
@@ -120,7 +119,7 @@
       <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
 
-    <!-- View 3: 系統設定獨立 Page View (已徹底移除 MoneyWiz CSV Import 相關 UI) -->
+    <!-- View 3: 系統設定獨立 Page View (已拔除 CSV 匯入相關元素) -->
     <div id="view-settings" class="main-page-view" style="display: none;">
       <div class="page-view-header">
         <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>

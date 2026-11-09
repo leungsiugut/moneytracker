@@ -674,7 +674,9 @@ window.refreshLiveStockPrices = async function() {
   }
 };
 
-// 嚴格維持原版穩定計算，絕不扣除 buy/sell
+// ==========================================================================
+// 核心計算引擎：嚴格維持穩定版本公式，絕不扣除 buy / sell
+// ==========================================================================
 function getAccountCashBalance(accId) {
   const acc = accounts.find(a => a.id === accId);
   if (!acc) return 0;
@@ -726,6 +728,7 @@ function getAccountCashBalance(accId) {
       }
     }
 
+    // 嚴格維持原樣：絕不在這裡執行 buy 與 sell 的現金重複扣除！
     if (t.type === 'dividend' && t.accountId === accId) balance += Number(t.amount);
   });
 
@@ -1018,6 +1021,7 @@ window.renderPickerCategories = function(flowType, keyword = '') {
   container.innerHTML = '';
   const kw = (keyword || '').toLowerCase().trim();
 
+  // 若無輸入搜尋關鍵字，頂部優先渲染「最近使用 5 個分類」
   if (!kw) {
     const recentIds = getRecentCategoryIds();
     const validRecents = recentIds
@@ -1048,6 +1052,7 @@ window.renderPickerCategories = function(flowType, keyword = '') {
     }
   }
 
+  // 下方完整樹狀分類清單
   const parents = categories.filter(c => (!c.flowType || c.flowType === flowType) && !c.parentId);
   parents.forEach(p => {
     const children = categories.filter(c => c.parentId === p.id);
@@ -2373,7 +2378,9 @@ window.deleteCurrentGroup = function() {
   saveData();
 };
 
+// ==========================================
 // 底部安全初始化區塊
+// ==========================================
 try {
   if (typeof initCurrencyDropdowns === 'function') initCurrencyDropdowns();
   if (typeof updateFXRates === 'function') updateFXRates(typeof baseCurrency !== 'undefined' ? baseCurrency : 'CAD');
