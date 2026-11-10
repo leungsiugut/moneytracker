@@ -335,15 +335,24 @@ function convertAmount(amt, fromCur, toCur) {
   return totalInCAD * rateCADToTarget;
 }
 
+// 核心金額格式化函式（消除 -0.00 負零現象 & 徹底移除 $ 符號）
 function fmtCur(amt, cur = 'CAD') {
-  const sign = amt < 0 ? '-' : '';
-  const absAmt = Math.abs(amt);
+  let num = Number(amt) || 0;
+  // 1. 微小值歸零防護（消除浮點數微負數導致的 -0.00 現象）
+  if (Math.abs(num) < 0.005) {
+    num = 0;
+  }
+  
+  const sign = num < 0 ? '-' : '';
+  const absAmt = Math.abs(num);
   const isZeroDecimal = ['JPY', 'TWD', 'KRW'].includes(cur);
   const formatted = absAmt.toLocaleString('en-US', {
     minimumFractionDigits: isZeroDecimal ? 0 : 2,
     maximumFractionDigits: isZeroDecimal ? 0 : 2
   });
-  return `${sign}$${formatted} ${cur}`;
+  
+  // 2. 徹底移除 $ 符號：純粹輸出 符號 + 數值 + 幣種
+  return `${sign}${formatted} ${cur}`;
 }
 
 // ==========================================
@@ -660,7 +669,7 @@ window.refreshLiveStockPrices = async function() {
 };
 
 // ==========================================================================
-// 核心現金結餘計算（包含買賣股票扣除與實收標準會計邏輯）[cite: 9]
+// 核心現金結餘計算（包含買賣股票扣除與實收標準會計邏輯）
 // ==========================================================================
 function getAccountCashBalance(accId) {
   const acc = accounts.find(a => a.id === accId);
@@ -715,12 +724,12 @@ function getAccountCashBalance(accId) {
       }
     }
 
-    // 買入證券：扣除 (總價 + 佣金)[cite: 9]
+    // 買入證券：扣除 (總價 + 佣金)
     if (t.type === 'buy' && t.accountId === accId) {
       balance -= (Number(t.amount) + (Number(t.commission) || 0));
     }
 
-    // 賣出證券：實收 = 總價(amount) - 佣金(commission)[cite: 9]
+    // 賣出證券：實收 = 總價(amount) - 佣金(commission)
     if (t.type === 'sell' && t.accountId === accId) {
       balance += (Number(t.amount) - (Number(t.commission) || 0));
     }
@@ -910,7 +919,8 @@ window.renderApp = function() {
   const titleEl = document.getElementById('header-networth-title');
   const amtEl = document.getElementById('total-net-worth');
   if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency} 📈)`;
-  if (amtEl) amtEl.innerText = `$${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // 移除 $ 符號
+  if (amtEl) amtEl.innerText = `${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (typeof window.renderAccountsView === 'function') window.renderAccountsView();
   renderDetailView();
@@ -1295,7 +1305,7 @@ function renderDetailView() {
 
   if (!currentAcc) {
     if (nameEl) nameEl.innerText = '請先建立帳戶';
-    if (balEl) balEl.innerText = '$0.00';
+    if (balEl) balEl.innerText = '0.00';
     container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">未有選定帳戶</p>';
     if (investTabs) investTabs.style.display = 'none';
     return;
@@ -1343,8 +1353,8 @@ function renderHoldings(currentAcc) {
     card.innerHTML = `
       <div>
         <div class="holding-symbol">${h.symbol}</div>
-        <div class="holding-shares">${displayShares} 股 • 均價 $${h.avgCost.toFixed(2)} (市價 $${h.currentPrice.toFixed(2)})</div>
-        ${h.totalDividends > 0 ? `<div class="holding-div-badge">累積股息: +$${h.totalDividends.toFixed(2)}</div>` : ''}
+        <div class="holding-shares">${displayShares} 股 • 均價 ${h.avgCost.toFixed(2)} (市價 ${h.currentPrice.toFixed(2)})</div>
+        ${h.totalDividends > 0 ? `<div class="holding-div-badge">累積股息: +${h.totalDividends.toFixed(2)}</div>` : ''}
       </div>
       <div>
         <div class="holding-val">${fmtCur(h.marketValue, currentAcc.currency)}</div>
@@ -1477,9 +1487,9 @@ function createTxElement(tx, currentAcc) {
       const totalOut = Number(tx.amount) + comm;
       amtStr = `-${fmtCur(totalOut, displayCur)}`;
 
-      // 外幣支出審計展示
+      // 外幣支出審計展示（徹底移除 $）
       if (tx.foreignAmount && tx.foreignCurrency && tx.foreignCurrency !== displayCur) {
-        const commStr = comm > 0 ? ` + 手續費 $${comm.toFixed(2)}` : '';
+        const commStr = comm > 0 ? ` + 手續費 ${comm.toFixed(2)}` : '';
         const fxInfo = `包含 ${tx.foreignCurrency} ${Number(tx.foreignAmount).toFixed(2)} @ ${Number(tx.rate || 1).toFixed(4)}${commStr}`;
         catBadgeHtml += `<span class="tx-cat-chip">🌐 ${fxInfo}</span>`;
       } else if (comm > 0) {
@@ -1538,14 +1548,16 @@ function createTxElement(tx, currentAcc) {
     }
   } else if (tx.type === 'buy') {
     icon = '📈';
-    title = `買入 ${tx.symbol} (${tx.shares} 股 @ $${tx.price})`;
+    // 徹底移除 $
+    title = `買入 ${tx.symbol} (${tx.shares} 股 @ ${tx.price})`;
     amtClass = 'expense';
     amtStr = `-${fmtCur(Number(tx.amount) + (Number(tx.commission) || 0), displayCur)}`;
     catBadgeHtml = `<span class="tx-cat-chip">📈 證券買入</span>`;
   } else if (tx.type === 'sell') {
     icon = '📉';
     const comm = Number(tx.commission) || 0;
-    title = `賣出 ${tx.symbol} (${tx.shares} 股 @ $${tx.price})${comm > 0 ? ' • 佣金 $' + comm : ''}`;
+    // 徹底移除 $
+    title = `賣出 ${tx.symbol} (${tx.shares} 股 @ ${tx.price})${comm > 0 ? ' • 佣金 ' + comm : ''}`;
     const netProceeds = Number(tx.amount) - comm;
     amtClass = 'income';
     amtStr = `+${fmtCur(netProceeds, displayCur)}`;
@@ -1705,7 +1717,7 @@ window.fetchLiveExpenseFX = async function(silent = false) {
 };
 
 // ==========================================================================
-// 嚴格隔離的 switchTxTab（杜絕 Transfer 欄位殘留至 Expense）[cite: 9]
+// 嚴格隔離的 switchTxTab（杜絕 Transfer 欄位殘留至 Expense）
 // ==========================================================================
 window.switchTxTab = function(type) {
   currentTxType = type;
@@ -1996,7 +2008,7 @@ window.saveTransaction = function() {
       const rate = parseFloat(document.getElementById('tx-foreign-rate').value) || (foreignAmt > 0 ? (baseAmt / foreignAmt) : 1);
       const comm = parseFloat(document.getElementById('tx-expense-commission').value) || 0;
 
-      if (baseAmt <= 0 && foreignAmt <= 0) { alert('請填寫有效金額！'); return false; }
+      if (baseAmt <= 0 && foreignAmt <= 0) { alert('請填寫有效金額！'); return; }
 
       txData = {
         ...txData,
@@ -2011,7 +2023,7 @@ window.saveTransaction = function() {
       };
     } else {
       const amount = parseFloat(document.getElementById('tx-amount').value) || 0;
-      if (amount <= 0) { alert('請填寫有效金額！'); return false; }
+      if (amount <= 0) { alert('請填寫有效金額！'); return; }
       txData = {
         ...txData,
         title,
@@ -2418,7 +2430,8 @@ function renderNetWorthChart() {
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false } },
-        y: { ticks: { callback: v => '$' + v.toLocaleString() } }
+        // 移除走勢圖 Y 軸刻度硬編碼之 $ 符號
+        y: { ticks: { callback: v => v.toLocaleString() } }
       }
     }
   });

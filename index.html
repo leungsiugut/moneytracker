@@ -30,7 +30,8 @@
     <div class="header-left">
       <div class="net-worth-box" onclick="switchMainTab('accounts'); openReportModal();" title="點擊檢視資產走勢">
         <span class="net-worth-title" id="header-networth-title">Net Worth (CAD 📈)</span>
-        <span class="net-worth-amt" id="total-net-worth">$0.00</span>
+        <!-- 移除 $ 符號 -->
+        <span class="net-worth-amt" id="total-net-worth">0.00</span>
       </div>
     </div>
     <div class="header-right">
@@ -80,7 +81,8 @@
               <button class="btn-back" onclick="goBackToList()" title="返回">‹</button>
               <div>
                 <h2 id="current-account-name" style="font-size: 17px; font-weight: 700;">請選擇帳戶</h2>
-                <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">$0.00</div>
+                <!-- 移除 $ 符號 -->
+                <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">0.00</div>
               </div>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
@@ -114,7 +116,8 @@
     <div id="view-debt-tracker" class="main-page-view" style="display: none;">
       <div class="page-view-header">
         <h2 style="font-size: 18px; font-weight: 700;">🚩 內部借貸待還中心</h2>
-        <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: $0.00</div>
+        <!-- 移除 $ 符號 -->
+        <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: 0.00</div>
       </div>
       <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
     </div>
@@ -218,7 +221,7 @@
           <input type="number" step="any" id="tx-amount" placeholder="0.00" oninput="handleExpenseAmountInput('base')">
         </div>
 
-        <!-- 外幣支出動態展開欄位 (無框無縮進，與普通欄位排版完全一致)[cite: 9] -->
+        <!-- 外幣支出動態展開欄位 (無框無縮進，與普通欄位排版完全一致) -->
         <div id="f-group-foreign-expense" style="display: none; flex-direction: column; gap: 14px;">
           <div class="form-group">
             <label id="label-foreign-amount">金額 (外幣)</label>
@@ -546,7 +549,8 @@
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">勾選本期交易</label>
               <button type="button" class="btn-action btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="toggleAllStmtTxs()">全選 / 取消全選</button>
             </div>
-            <span id="stmt-calc-summary" style="font-size: 12px; font-weight: 700;">已勾選: $0.00</span>
+            <!-- 移除 $ 符號 -->
+            <span id="stmt-calc-summary" style="font-size: 12px; font-weight: 700;">已勾選: 0.00</span>
           </div>
           <div id="stmt-tx-checklist" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 10px; padding: 6px;"></div>
         </div>

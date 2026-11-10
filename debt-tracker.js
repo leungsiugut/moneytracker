@@ -19,7 +19,7 @@ window.isPendingTx = function(t) {
   return t.isPending === true || String(t.isPending).trim().toUpperCase() === 'TRUE';
 };
 
-// 模組 3：借貸看板卡片排版、日期排序（由新至舊）與文字簡化
+// 借貸看板卡片排版、日期排序（由新至舊）與文字簡化（徹底移除 $ 符號）
 window.renderDebtTrackerView = function() {
   const container = document.getElementById('debt-cards-container');
   const summaryBadge = document.getElementById('debt-summary-badge');
@@ -36,7 +36,7 @@ window.renderDebtTrackerView = function() {
 
   if (pendingTxs.length === 0) {
     container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">🎉 目前沒有任何待還借貸項目。</p>';
-    if (summaryBadge) summaryBadge.innerText = '待還總額: $0.00';
+    if (summaryBadge) summaryBadge.innerText = '待還總額: 0.00';
     return;
   }
 
@@ -57,7 +57,6 @@ window.renderDebtTrackerView = function() {
         <span class="debt-card-title">${tx.title || '借貸項目'}</span>
         <span class="debt-card-date">${cleanDateStr(tx.date)}</span>
       </div>
-      <!-- 直接顯示來源帳戶與幣種，拔除「所屬帳戶:」字眼 -->
       <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
         ${accName} (${cur})
       </div>
@@ -181,13 +180,14 @@ window.openRepayLogModal = function(txId) {
     logs.forEach(log => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 4px; border-bottom:1px solid #F2F2F7; font-size:13px;';
+      // 移除 $ 符號
       row.innerHTML = `
         <div>
           <div style="font-weight:600;">${log.note || '分期還款'}</div>
           <div style="font-size:11px; color:var(--text-muted);">${cleanDateStr(log.date)}</div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-weight:700; color:#2D6A4F;">+$${parseFloat(log.amount).toFixed(2)}</span>
+          <span style="font-weight:700; color:#2D6A4F;">+${parseFloat(log.amount).toFixed(2)}</span>
           <button type="button" style="background:none; border:none; cursor:pointer;" onclick="editRepayRecord('${log.id}')" title="編輯">✏️</button>
           <button type="button" style="background:none; border:none; cursor:pointer;" onclick="deleteRepayRecord('${log.id}', '${txId}')" title="刪除">🗑️</button>
         </div>
