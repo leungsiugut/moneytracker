@@ -30,7 +30,6 @@
     <div class="header-left">
       <div class="net-worth-box" onclick="switchMainTab('accounts'); openReportModal();" title="點擊檢視資產走勢">
         <span class="net-worth-title" id="header-networth-title">Net Worth (CAD)</span>
-        <!-- 移除 $ 符號 -->
         <span class="net-worth-amt" id="total-net-worth">0.00</span>
       </div>
     </div>
@@ -81,7 +80,6 @@
               <button class="btn-back" onclick="goBackToList()" title="返回">‹</button>
               <div>
                 <h2 id="current-account-name" style="font-size: 17px; font-weight: 700;">請選擇帳戶</h2>
-                <!-- 移除 $ 符號 -->
                 <div id="current-account-balance" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">0.00</div>
               </div>
             </div>
@@ -114,12 +112,22 @@
 
     <!-- View 2: 內部待還款中心獨立 View -->
     <div id="view-debt-tracker" class="main-page-view" style="display: none;">
-      <div class="page-view-header">
-        <h2 style="font-size: 18px; font-weight: 700;">內部借貸待還中心</h2>
-        <!-- 移除 $ 符號 -->
-        <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: 0.00</div>
+      <div class="page-view-header" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 18px; font-weight: 700;">🚩 內部借貸待補回</h2>
+          <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: 0.00</div>
+        </div>
+        <!-- 標題下純顯示總結行（左進度條、右說明文字） -->
+        <div id="debt-progress-summary-row" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 2px;">
+          <div class="debt-overall-progress-track" style="flex: 1; height: 5px; background: #EFEFEF; border-radius: 999px; overflow: hidden;">
+            <div id="debt-overall-progress-bar" style="height: 100%; width: 0%; background: #2D6A4F; border-radius: 999px; transition: width 0.3s ease;"></div>
+          </div>
+          <span id="debt-overall-progress-text" style="font-size: 11.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">共 0 項 · 整體已補回 0%</span>
+        </div>
       </div>
-      <div id="debt-cards-container" style="padding: 16px 20px; flex: 1; overflow-y: auto;"></div>
+      <div style="padding: 14px 16px; flex: 1; overflow-y: auto;">
+        <div id="debt-cards-container"></div>
+      </div>
     </div>
 
     <!-- View 3: 系統設定獨立 Page View -->
@@ -549,7 +557,6 @@
               <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">勾選本期交易</label>
               <button type="button" class="btn-action btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="toggleAllStmtTxs()">全選 / 取消全選</button>
             </div>
-            <!-- 移除 $ 符號 -->
             <span id="stmt-calc-summary" style="font-size: 12px; font-weight: 700;">已勾選: 0.00</span>
           </div>
           <div id="stmt-tx-checklist" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 10px; padding: 6px;"></div>

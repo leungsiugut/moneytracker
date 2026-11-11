@@ -516,7 +516,7 @@ body.hide-header header {
   align-items: center;
   padding: 10px 14px; 
   margin-bottom: 6px; 
-  border: var(--card-border);
+  border: var(--card-border); 
   border-radius: 14px; 
   cursor: pointer; 
   background: #FFFFFF; 
@@ -788,36 +788,6 @@ select:focus,
   z-index: 1100 !important;
 }
 
-/* 內部借貸卡片樣式 */
-.debt-card {
-  background: var(--card-bg) !important;
-  border: var(--card-border) !important;
-  border-radius: 16px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--card-shadow);
-}
-.debt-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.debt-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-main);
-}
-.debt-card-date {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.debt-stat-val.remain {
-  color: var(--ios-red);
-  font-weight: 800;
-  font-size: 14px;
-}
-
 /* 分類搜尋抽屜樣式 */
 .category-picker-trigger {
   display: flex;
@@ -965,7 +935,7 @@ select:focus,
 }
 
 /* ==========================================================================
-   外幣膠囊選單樣式 (Capsule Select)[cite: 8]
+   外幣膠囊選單樣式 (Capsule Select)
    ========================================================================== */
 .capsule-select {
   background-color: #FFFFFF !important;
@@ -982,7 +952,6 @@ select:focus,
 
 /* ============================================================
    v2 REDESIGN OVERRIDES — 白底・低飽和色・線條 icon・grouped list
-   (由小黃按 Lok 2026-11-10 mockup 確認版回寫；只改 presentation)
    ============================================================ */
 :root { --accent: #4353A8; }
 
@@ -1040,7 +1009,7 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 #account-groups-container > .group-card:last-child { border-bottom: none !important; }
 .ios-group-card.is-edit-mode, .group-card.is-edit-mode { border: none !important; border-bottom: 1px solid rgba(0,0,0,0.06) !important; background: #F7F8FC !important; }
 
-/* 分組線條 icon 色格（用返 group 既有 theme 資料） */
+/* 分組線條 icon 色格 */
 .group-icon-tile {
   width: 36px; height: 36px; min-width: 36px;
   border-radius: 10px;
@@ -1051,7 +1020,7 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 .search-ic { display: inline-flex; color: #8E8E93; }
 .search-ic svg { display: block; }
 
-/* 底部 tab：active 改 accent，不再 iOS 藍 */
+/* 底部 tab：active 改 accent */
 .tab-item.active { color: var(--accent) !important; }
 .tab-item.active .tab-pill { background: #ECEEF7 !important; }
 .tab-pill { color: inherit; }
@@ -1059,15 +1028,11 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 .tab-action-camera .tab-pill { font-size: inherit !important; }
 
 /* 其他卡片統一去重陰影 */
-.debt-card, .settings-card, .holding-card { box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important; border-radius: 14px !important; }
+.settings-card, .holding-card { box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important; border-radius: 14px !important; }
 .tx-item { box-shadow: none !important; }
 .modal-card { border-radius: 16px !important; }
 .detail-header .btn-action svg { display: block; }
 
-
-/* ============================================================
-   v3 — 其餘頁面一致化：帳戶明細 / 記一筆 / 設定 / 分類
-   ============================================================ */
 /* 交易列：浮卡改 grouped list */
 .tx-list { padding: 0 20px 10px 20px !important; }
 .tx-item {
@@ -1083,7 +1048,7 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 .tx-tag svg { display: block; }
 .tx-cat-chip { background: #F2F3F7 !important; color: #5A5F68 !important; }
 
-/* 待還旗幟掣：線條 icon，未標記淡灰、已標記柔和紅 */
+/* 待還旗幟掣 */
 .flag-toggle-btn { opacity: 1 !important; color: #C9CDD4 !important; display: inline-flex; }
 .flag-toggle-btn svg { display: block; }
 .flag-toggle-btn.flagged { color: #C4554D !important; }
@@ -1116,14 +1081,146 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 .cat-child-list { background: #FAFAFB !important; }
 
 /* ============================================================
-   v4 FIX — 電腦版㩒入戶口後 header 消失問題
-   原因：selectAccount() / switchMainTab() 會俾 body 加 .hide-header，
-   而原本 body.hide-header header 嗰條規則冇分螢幕闊度，全域生效，
-   令桌面版（本應 sidebar + 明細並排）都收埋成個 header，
-   連右上角選單掣同同步掣一齊唔見。
-   修法（CSS-only）：hide-header 只喺手機闊度生效；
-   桌面版 header 永遠保留。手機版全螢幕明細行為完全不變。
+   內部借貸待補回專屬 UI 樣式 (Grouped List & 幼進度條 & 圓形掣)
    ============================================================ */
+.debt-grouped-list {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.debt-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #FFFFFF;
+  gap: 12px;
+}
+
+.debt-row-item:last-child {
+  border-bottom: none;
+}
+
+.debt-cat-tile {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  background: #EFF1F6;
+  color: #4A4F57;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.debt-cat-tile svg { display: block; }
+
+.debt-row-middle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debt-item-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1C1C1E;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debt-item-account {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.debt-item-date {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.debt-item-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.debt-item-progress-track {
+  width: 80px;
+  height: 5px;
+  background: #EFEFEF;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.debt-item-progress-bar {
+  height: 100%;
+  background: #2D6A4F;
+  border-radius: 999px;
+}
+
+.debt-item-progress-text {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #2D6A4F;
+}
+
+.debt-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.debt-outstanding-amt {
+  font-size: 14px;
+  font-weight: 700;
+  color: #D95D5D;
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.debt-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debt-btn-circle {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.debt-btn-circle:active {
+  transform: scale(0.92);
+}
+
+.debt-btn-circle.secondary {
+  background: #F2F2F7;
+  color: #4A4F57;
+}
+
+.debt-btn-circle.primary {
+  background: var(--text-main);
+  color: #FFFFFF;
+}
+
 @media (min-width: 769px) {
   body.hide-header header { display: flex !important; }
 }
