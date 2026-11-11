@@ -1225,3 +1225,10 @@ header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
 @media (min-width: 769px) {
   body.hide-header header { display: flex !important; }
 }
+/* === 捲動修復（2026-11-11）：唔准 sidebar 入面啲仔縮細 ===
+   .sidebar 係直向 flex，內容太高嗰陣 flex 預設會將啲仔壓縮嚟就個框；
+   #account-groups-container 本身 overflow:hidden，壓縮之後多出嘅戶口會俾佢剪走，
+   令成欄冇得捲、底部戶口永遠睇唔到。加 flex-shrink:0 令個盒保持真實高度，
+   .sidebar 嘅 overflow-y:auto 先會生效。 */
+.sidebar > .top-action-bar { flex-shrink: 0; }
+.sidebar > #account-groups-container { flex-shrink: 0; }

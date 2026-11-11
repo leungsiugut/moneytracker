@@ -984,21 +984,12 @@ window.toggleGroupCollapse = function(grpId) {
   collapsedGroups[grpId] = !currentState;
   localStorage.setItem('wiz_collapsed_groups', JSON.stringify(collapsedGroups));
   // 記住捲動位置：renderAccountsView 會成個 list 重建，唔留返 scrollTop 會彈返去頂
+  // （2026-11-11 修訂：唔再用 scrollIntoView 跳位，淨係還原返原來捲動位置；
+  //   展開後睇唔睇到底部戶口，交返俾 .sidebar 正常捲動處理）
   const sidebarEl = document.querySelector('.sidebar');
   const prevScrollTop = sidebarEl ? sidebarEl.scrollTop : 0;
-  const wasCollapsed = currentState; // true = 啱啱由收起變展開
   renderAccountsView();
-  if (sidebarEl) {
-    if (wasCollapsed) {
-      // 展開嗰組：將組頭推到 sidebar 頂，等下面啲戶口入晒視野
-      const idx = groups.findIndex(g => g.id === grpId);
-      const cards = document.querySelectorAll('#account-groups-container > .ios-group-card, #account-groups-container > .group-card');
-      if (idx >= 0 && cards[idx]) cards[idx].scrollIntoView({ block: 'start' });
-      else sidebarEl.scrollTop = prevScrollTop;
-    } else {
-      sidebarEl.scrollTop = prevScrollTop;
-    }
-  }
+  if (sidebarEl) sidebarEl.scrollTop = prevScrollTop;
 };
 
 window.renderApp = function() {
