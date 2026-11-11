@@ -35,7 +35,7 @@ window.renderDebtTrackerView = function() {
   let totalRemaining = 0;
 
   if (pendingTxs.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">🎉 目前沒有任何待還借貸項目。</p>';
+    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">目前沒有任何待還借貸項目。</p>';
     if (summaryBadge) summaryBadge.innerText = '待還總額: 0.00';
     return;
   }
@@ -148,7 +148,7 @@ window.saveQuickRepayment = function() {
   if (tx) {
     const totalRepaid = getTxRepaidAmount(txId);
     if (totalRepaid >= parseFloat(tx.amount)) {
-      if (confirm('🎉 此筆大數已全數還清！是否取消該筆交易的 Pending 標記？')) {
+      if (confirm('此筆大數已全數還清！是否取消該筆交易的 Pending 標記？')) {
         tx.isPending = false;
       }
     } else {
@@ -188,8 +188,8 @@ window.openRepayLogModal = function(txId) {
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-weight:700; color:#2D6A4F;">+${parseFloat(log.amount).toFixed(2)}</span>
-          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="editRepayRecord('${log.id}')" title="編輯">✏️</button>
-          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="deleteRepayRecord('${log.id}', '${txId}')" title="刪除">🗑️</button>
+          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="editRepayRecord('${log.id}')" title="編輯">${uiIcon('pencil', 14)}</button>
+          <button type="button" style="background:none; border:none; cursor:pointer;" onclick="deleteRepayRecord('${log.id}', '${txId}')" title="刪除">${uiIcon('trash', 14)}</button>
         </div>
       `;
       container.appendChild(row);

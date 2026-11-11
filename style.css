@@ -11,7 +11,7 @@
   /* 文字階層與系統色調 */
   --text-main: #1C1C1E;
   --text-muted: #8E8E93;
-  --ios-blue: #007AFF;
+  --ios-blue: #4353A8;
   --ios-green: #2D6A4F;
   --ios-red: #E5484D;
   --border-color: #EFECE6;
@@ -23,13 +23,13 @@
   --hero-text: #0A5EA8;
 
   /* 馬卡龍色系 Badge (36x36 圓角底座) */
-  --badge-mint: #D8F3DC;   --badge-mint-text: #2D6A4F;
-  --badge-pink: #FAD2E1;   --badge-pink-text: #9E3D60;
-  --badge-blue: #D0E1FD;   --badge-blue-text: #2B5C8F;
-  --badge-cream: #FFF1C5;  --badge-cream-text: #8A6D1F;
-  --badge-purple: #E2D4F0; --badge-purple-text: #603D82;
+  --badge-mint: #E1EDE3;   --badge-mint-text: #3A5F4B;
+  --badge-pink: #F2E2E7;   --badge-pink-text: #855062;
+  --badge-blue: #DFE8F1;   --badge-blue-text: #3D5A78;
+  --badge-cream: #F2EAD2;  --badge-cream-text: #76653A;
+  --badge-purple: #E6E0EF; --badge-purple-text: #5D4E77;
   --badge-grey: #E5E7EB;   --badge-grey-text: #4B5563;
-  --badge-orange: #FFE5D9; --badge-orange-text: #D95D5D;
+  --badge-orange: #F4E2D6; --badge-orange-text: #8F5A3D;
 }
 
 * { 
@@ -978,4 +978,152 @@ select:focus,
   outline: none !important;
   width: 100% !important;
   height: 38px !important;
+}
+
+/* ============================================================
+   v2 REDESIGN OVERRIDES — 白底・低飽和色・線條 icon・grouped list
+   (由小黃按 Lok 2026-11-10 mockup 確認版回寫；只改 presentation)
+   ============================================================ */
+:root { --accent: #4353A8; }
+
+header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
+
+/* Net Worth：拆走藍色漸變卡，改白底左對齊大數字 */
+.net-worth-box, .hero-card {
+  background: #FFFFFF !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  text-align: left !important;
+  align-items: flex-start !important;
+  padding: 4px 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+}
+.net-worth-title { color: #6E6E73 !important; letter-spacing: 1.2px !important; }
+.net-worth-amt, .hero-amount { color: #111111 !important; font-weight: 700 !important; font-size: 30px !important; }
+
+/* 同步掣：accent 藥丸，狀態色柔和化 */
+.sync-status { border-radius: 999px !important; border: 1px solid transparent !important; box-shadow: none !important; padding: 6px 12px !important; }
+.sync-status.synced { background: #ECEEF7 !important; color: var(--accent) !important; }
+.sync-status.syncing { background: #F5EFDB !important; color: #76653A !important; }
+.sync-status.pending-sync { background: #F7EADB !important; color: #8F5A3D !important; border-color: transparent !important; }
+.sync-status.error { background: #F9E4E4 !important; color: #A33B3E !important; }
+.sync-ic { display: inline-flex; align-items: center; }
+.sync-ic svg { display: block; }
+.sync-status.syncing .sync-ic svg { animation: uiSpin 1s linear infinite; }
+@keyframes uiSpin { to { transform: rotate(360deg); } }
+
+/* 頂部操作列：去陰影、細圓角、扁平 */
+.capsule-btn { border: 1px solid rgba(0,0,0,0.09) !important; border-radius: 10px !important; box-shadow: none !important; height: 36px !important; }
+.capsule-btn.active-edit-mode { background: #ECEEF7 !important; border-color: var(--accent) !important; color: var(--accent) !important; }
+.capsule-btn .btn-icon { display: inline-flex; align-items: center; color: #44484F; }
+.capsule-btn .btn-icon svg { display: block; }
+
+/* 分組：九卡合一做 grouped list */
+#account-groups-container {
+  margin: 4px 16px 16px 16px !important;
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+.ios-group-card, .group-card {
+  margin: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 13px 15px !important;
+}
+#account-groups-container > .ios-group-card:last-child,
+#account-groups-container > .group-card:last-child { border-bottom: none !important; }
+.ios-group-card.is-edit-mode, .group-card.is-edit-mode { border: none !important; border-bottom: 1px solid rgba(0,0,0,0.06) !important; background: #F7F8FC !important; }
+
+/* 分組線條 icon 色格（用返 group 既有 theme 資料） */
+.group-icon-tile {
+  width: 36px; height: 36px; min-width: 36px;
+  border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.group-icon-tile svg { display: block; }
+.group-chev { font-size: 15px; color: #B9BDC4; width: 12px; text-align: center; }
+.search-ic { display: inline-flex; color: #8E8E93; }
+.search-ic svg { display: block; }
+
+/* 底部 tab：active 改 accent，不再 iOS 藍 */
+.tab-item.active { color: var(--accent) !important; }
+.tab-item.active .tab-pill { background: #ECEEF7 !important; }
+.tab-pill { color: inherit; }
+.tab-pill svg { display: block; }
+.tab-action-camera .tab-pill { font-size: inherit !important; }
+
+/* 其他卡片統一去重陰影 */
+.debt-card, .settings-card, .holding-card { box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important; border-radius: 14px !important; }
+.tx-item { box-shadow: none !important; }
+.modal-card { border-radius: 16px !important; }
+.detail-header .btn-action svg { display: block; }
+
+
+/* ============================================================
+   v3 — 其餘頁面一致化：帳戶明細 / 記一筆 / 設定 / 分類
+   ============================================================ */
+/* 交易列：浮卡改 grouped list */
+.tx-list { padding: 0 20px 10px 20px !important; }
+.tx-item {
+  border: none !important;
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+  padding: 12px 2px !important;
+}
+.tx-item.pending-item { background: #FDF7F5 !important; }
+.tx-tag { background: #EFF1F6 !important; color: #4A4F57 !important; border-radius: 10px !important; }
+.tx-tag svg { display: block; }
+.tx-cat-chip { background: #F2F3F7 !important; color: #5A5F68 !important; }
+
+/* 待還旗幟掣：線條 icon，未標記淡灰、已標記柔和紅 */
+.flag-toggle-btn { opacity: 1 !important; color: #C9CDD4 !important; display: inline-flex; }
+.flag-toggle-btn svg { display: block; }
+.flag-toggle-btn.flagged { color: #C4554D !important; }
+
+.month-divider { background: #FFFFFF !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
+
+/* 分類線條 icon 色格 */
+.cat-icon-tile-sm {
+  width: 28px; height: 28px; min-width: 28px;
+  border-radius: 8px;
+  background: #EFF1F6; color: #4A4F57;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.cat-icon-tile-sm svg { display: block; }
+.picker-cat-row:hover, .picker-cat-row:active { background: #F5F6FA !important; }
+.recent-cat-chip svg { display: block; }
+
+/* 表單一致化 */
+.form-group input, .form-group select, .category-picker-trigger {
+  border-radius: 12px !important;
+  background: #FAFAFB !important;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--accent) !important; outline: none; }
+#tx-cat-display-name svg { display: inline-block; vertical-align: -3px; }
+#current-account-name svg { vertical-align: -3px; color: #4A4F57; }
+
+/* 分段 tab 主色一致 */
+.type-tab.active { color: #111111 !important; }
+.cat-parent-row { font-size: 15px; }
+.cat-child-list { background: #FAFAFB !important; }
+
+/* ============================================================
+   v4 FIX — 電腦版㩒入戶口後 header 消失問題
+   原因：selectAccount() / switchMainTab() 會俾 body 加 .hide-header，
+   而原本 body.hide-header header 嗰條規則冇分螢幕闊度，全域生效，
+   令桌面版（本應 sidebar + 明細並排）都收埋成個 header，
+   連右上角選單掣同同步掣一齊唔見。
+   修法（CSS-only）：hide-header 只喺手機闊度生效；
+   桌面版 header 永遠保留。手機版全螢幕明細行為完全不變。
+   ============================================================ */
+@media (min-width: 769px) {
+  body.hide-header header { display: flex !important; }
 }

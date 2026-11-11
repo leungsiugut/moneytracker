@@ -113,11 +113,11 @@ window.toggleEditMode = function() {
   if (btn && txt) {
     if (window.isEditMode) {
       btn.classList.add('active-edit-mode');
-      btn.querySelector('.btn-icon').innerText = '✓';
+      btn.querySelector('.btn-icon').innerHTML = uiIcon('check', 15);
       txt.innerText = '完成';
     } else {
       btn.classList.remove('active-edit-mode');
-      btn.querySelector('.btn-icon').innerText = '✏️';
+      btn.querySelector('.btn-icon').innerHTML = uiIcon('pencil', 15);
       txt.innerText = '編輯';
     }
   }
@@ -172,19 +172,19 @@ function updateSyncStatusUI(customState = null, msg = null) {
   if (btn && icon && text) {
     if (currentStatus === 'syncing') {
       btn.className = 'sync-status syncing';
-      icon.innerText = '🔄';
+      icon.innerHTML = uiIcon('refresh', 14);
       text.innerText = defaultTitle;
     } else if (currentStatus === 'error') {
       btn.className = 'sync-status error';
-      icon.innerText = '⚠️';
+      icon.innerHTML = uiIcon('alert', 14);
       text.innerText = defaultTitle;
     } else if (currentStatus === 'pending-sync') {
       btn.className = 'sync-status pending-sync';
-      icon.innerText = '🟠';
+      icon.innerHTML = uiIcon('cloud', 15);
       text.innerText = defaultTitle;
     } else {
       btn.className = 'sync-status synced';
-      icon.innerText = '☁️';
+      icon.innerHTML = uiIcon('cloud', 15);
       text.innerText = '已同步';
     }
   }
@@ -215,13 +215,8 @@ document.addEventListener('click', (e) => {
 });
 
 function getGroupDefaultIcon(grp) {
-  if (grp.icon && grp.icon.trim()) return grp.icon.trim();
-  const name = (grp.name || '').toLowerCase();
-  if (name.includes('credit')) return '💳';
-  if (name.includes('bank') || name.includes('cash')) return '🏦';
-  if (name.includes('stock') || name.includes('invest') || name.includes('broker')) return '📈';
-  if (name.includes('crypto')) return '🪙';
-  return '📁';
+  // v2: 主頁不再顯示儲存落嚟嘅 emoji icon，改依分組名推導線條 icon（資料冇改，只改呈現）
+  return uiIcon(getGroupIconKind(grp));
 }
 
 function getBalanceColorClass(amt) {
@@ -230,25 +225,107 @@ function getBalanceColorClass(amt) {
   return num > 0 ? 'bal-positive' : 'bal-negative';
 }
 
+// ===== v2 線條 icon 系統 (Lucide 風格, stroke=currentColor) — 取代 UI emoji =====
+const UI_ICON_PATHS = {
+  bank: '<path d="M3 21h18"/><path d="M5 21v-8"/><path d="M9.5 21v-8"/><path d="M14.5 21v-8"/><path d="M19 21v-8"/><path d="m12 3 9 5H3l9-5z"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  chart: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  coin: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2c.6-.4 1.5-.6 2.5-.6 1.4 0 2.4.7 2.4 1.7 0 1.2-1.1 1.7-2.4 1.7-1 0-1.9-.2-2.5-.6"/><path d="M9.5 14.8c.6-.4 1.5-.6 2.5-.6 1.4 0 2.4.7 2.4 1.7 0 1-1 1.7-2.4 1.7-1 0-1.9-.2-2.5-.6"/>',
+  folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/>',
+  pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  cloud: '<path d="M17.5 19a4.5 4.5 0 0 0 .42-8.98 6.5 6.5 0 0 0-12.6 1.74A4 4 0 0 0 6 19h11.5z"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.7 9.7 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.7 9.7 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/>'
+};
+function uiIcon(name, size = 19) {
+  const d = UI_ICON_PATHS[name] || UI_ICON_PATHS.folder;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+Object.assign(UI_ICON_PATHS, {
+  car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+  coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>',
+  utensils: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+  heart: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.1C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/>',
+  plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>',
+  tag: '<path d="M12.6 2.7 21.3 11.4a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.7A2 2 0 0 1 2 11.3V4a2 2 0 0 1 2-2h7.3a2 2 0 0 1 1.3.7Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/>',
+  ticket: '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>',
+  phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/>',
+  bus: '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.7 9a.6.6 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .7-1c2.9-.8 5.2-1.9 6.8-3.2a1 1 0 0 1 1.2 0C14.3 3.1 16.6 4.2 19.5 5a1 1 0 0 1 .5 1z"/>',
+  scale: '<path d="m16 16 3-8 3 8c-.9.7-1.9 1-3 1s-2.1-.3-3-1Z"/><path d="m2 16 3-8 3 8c-.9.7-1.9 1-3 1s-2.1-.3-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+  repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  exchange: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  chartDown: '<path d="m3 7 6 6 4-4 8 8"/><path d="M21 11v6h-6"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',
+  gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+});
+function getCategoryIconKind(cat) {
+  if (!cat) return 'tag';
+  const parent = cat.parentId ? categories.find(c => c.id === cat.parentId) : null;
+  const s = ((parent ? parent.name + ' ' : '') + (cat.name || '')).toLowerCase();
+  if (/(auto|car|vehicle|loan)/.test(s)) return 'car';
+  if (/(gas|fuel)/.test(s)) return 'zap';
+  if (/(insurance)/.test(s)) return 'shield';
+  if (/(bill|utilities|utility|tax)/.test(s)) return 'receipt';
+  if (/(food|dining|restaurant|grocer|coffee)/.test(s)) return 'coffee';
+  if (/(salary|wage|income|job)/.test(s)) return 'briefcase';
+  if (/(interest|dividend|invest|stock)/.test(s)) return 'chart';
+  if (/(leisure|entertainment|movie|game|hobby)/.test(s)) return 'ticket';
+  if (/(digital|phone|internet|software|subscription)/.test(s)) return 'phone';
+  if (/(transport|transit|travel|flight|trip)/.test(s)) return s.includes('travel') || s.includes('flight') || s.includes('trip') ? 'plane' : 'bus';
+  if (/(hous|home|rent|mortgage)/.test(s)) return 'home';
+  if (/(health|medical|care)/.test(s)) return 'heart';
+  if (/(shop|retail|cloth)/.test(s)) return 'bag';
+  if (/(gift)/.test(s)) return 'gift';
+  if (/(music)/.test(s)) return 'music';
+  return 'tag';
+}
+function catIcon(cat, size = 17) { return uiIcon(getCategoryIconKind(cat), size); }
+
+function getGroupIconKind(grp) {
+  const name = ((grp && grp.name) || '').toLowerCase();
+  if (name.includes('credit') || name.includes('card')) return 'card';
+  if (name.includes('stock') || name.includes('invest') || name.includes('broker') || name.includes('alternative')) return 'chart';
+  if (name.includes('crypto')) return 'coin';
+  if (name.includes('usd') || name.includes('cash')) return 'wallet';
+  if (name.includes('bank')) return 'bank';
+  if (name.includes('closed') || name.includes('rarely')) return 'folder';
+  return 'folder';
+}
+
 function getAccountTypeIcon(type) {
   const t = (type || '').toLowerCase();
   switch (t) {
     case 'credit_card':
     case 'credit':
-      return '💳';
+      return uiIcon('card', 18);
     case 'investment':
     case 'brokerage':
-      return '📈';
+      return uiIcon('chart', 18);
     case 'crypto':
-      return '🪙';
+      return uiIcon('coin', 18);
     case 'checking':
-      return '👛';
+      return uiIcon('wallet', 18);
     case 'savings':
-      return '🏦';
+      return uiIcon('bank', 18);
     case 'cash':
-      return '💵';
+      return uiIcon('cash', 18);
     default:
-      return '💰';
+      return uiIcon('wallet', 18);
   }
 }
 
@@ -643,7 +720,7 @@ window.fetchQuoteForInput = function() {
 
 window.refreshLiveStockPrices = async function() {
   const btn = document.getElementById('btn-refresh-prices') || event?.target;
-  const originalText = btn ? btn.innerText : '🔄 更新市價';
+  const originalText = btn ? btn.innerText : '更新市價';
 
   if (btn) {
     btn.innerText = '⏳ 正在更新市價...';
@@ -833,7 +910,7 @@ window.renderAccountsView = function() {
       grpTotal += convertAmount(b, acc.currency, grp.currency || baseCurrency);
     });
 
-    const grpIcon = (grp.icon && grp.icon.trim()) ? grp.icon.trim() : (typeof getGroupDefaultIcon === 'function' ? getGroupDefaultIcon(grp) : '📁');
+    const grpIcon = getGroupDefaultIcon(grp);
     const balColorClass = getBalanceColorClass(grpTotal);
 
     const groupCard = document.createElement('div');
@@ -856,8 +933,8 @@ window.renderAccountsView = function() {
 
     headerRow.innerHTML = `
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:10px; color:#8E8E93; width:12px; text-align:center;">${window.isEditMode ? '✎' : (isCollapsed ? '▶' : '▼')}</span>
-        <span style="font-size:18px;">${grpIcon}</span>
+        <span class="group-chev">${window.isEditMode ? uiIcon('pencil', 13) : (isCollapsed ? '›' : '⌄')}</span>
+        <span class="group-icon-tile group-badge-${grp.theme || 'grey'}">${grpIcon}</span>
         <span style="font-size:15px; font-weight:700; color:#1C1C1E;">${grp.name}</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
@@ -918,7 +995,7 @@ window.renderApp = function() {
 
   const titleEl = document.getElementById('header-networth-title');
   const amtEl = document.getElementById('total-net-worth');
-  if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency} 📈)`;
+  if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency})`;
   // 移除 $ 符號
   if (amtEl) amtEl.innerText = `${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -1010,7 +1087,7 @@ function selectCategoryFromPicker(cat) {
   const catInput = document.getElementById('tx-category');
   const catDisplay = document.getElementById('tx-cat-display-name');
   if (catInput) catInput.value = cat.id;
-  if (catDisplay) catDisplay.innerText = `${cat.icon || '🏷️'} ${cat.name}`;
+  if (catDisplay) catDisplay.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;">${catIcon(cat, 17)}<span>${cat.name}</span></span>`;
 
   recordRecentCategory(cat.id);
   closeModal('cat-picker-drawer');
@@ -1038,7 +1115,7 @@ window.renderPickerCategories = function(flowType, keyword = '') {
     if (validRecents.length > 0) {
       const section = document.createElement('div');
       section.className = 'recent-cats-section';
-      section.innerHTML = `<div class="recent-cats-title">⏱️ 最近使用</div>`;
+      section.innerHTML = `<div class="recent-cats-title">最近使用</div>`;
 
       const wrap = document.createElement('div');
       wrap.className = 'recent-cats-wrap';
@@ -1047,7 +1124,7 @@ window.renderPickerCategories = function(flowType, keyword = '') {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'recent-cat-chip';
-        chip.innerHTML = `<span>${cat.icon || '🏷️'}</span><span>${cat.name}</span>`;
+        chip.innerHTML = `<span style="display:inline-flex;">${catIcon(cat, 15)}</span><span>${cat.name}</span>`;
         chip.onclick = () => {
           selectCategoryFromPicker(cat);
         };
@@ -1071,14 +1148,14 @@ window.renderPickerCategories = function(flowType, keyword = '') {
 
     const pHeader = document.createElement('div');
     pHeader.style.cssText = 'font-size:11.5px; font-weight:700; color:#8E8E93; padding:10px 8px 4px 8px; text-transform:uppercase;';
-    pHeader.innerText = `${p.icon || '📁'} ${p.name}`;
+    pHeader.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${catIcon(p, 14)}<span>${p.name}</span></span>`;
     container.appendChild(pHeader);
 
     showChildren.forEach(ch => {
       const row = document.createElement('div');
       row.className = 'picker-cat-row';
       row.style.cssText = 'display:flex; align-items:center; gap:10px; padding:10px 8px; border-radius:10px; cursor:pointer;';
-      row.innerHTML = `<span style="font-size:18px;">${ch.icon || '🏷️'}</span><span style="font-size:13.5px; font-weight:600; color:#1C1C1E;">${ch.name}</span>`;
+      row.innerHTML = `<span class="cat-icon-tile-sm">${catIcon(ch, 16)}</span><span style="font-size:13.5px; font-weight:600; color:#1C1C1E;">${ch.name}</span>`;
       row.onclick = () => {
         selectCategoryFromPicker(ch);
       };
@@ -1172,7 +1249,7 @@ function resetTxForm() {
   const catInput = document.getElementById('tx-category');
   const catDisplay = document.getElementById('tx-cat-display-name');
   if (catInput) catInput.value = '';
-  if (catDisplay) catDisplay.innerText = '🏷️ 點擊選擇分類';
+  if (catDisplay) catDisplay.innerText = '點擊選擇分類';
 
   setupModalTypeTabs(isInvest);
   populateTransferAccountSelects(defaultAcc ? defaultAcc.id : null);
@@ -1236,7 +1313,7 @@ function setupEditTxForm(txId) {
     const cat = categories.find(c => c.id === tx.categoryId);
     const catDisplay = document.getElementById('tx-cat-display-name');
     if (catDisplay) {
-      catDisplay.innerText = cat ? `${cat.icon} ${cat.name}` : '🏷️ 點擊選擇分類';
+      catDisplay.innerHTML = cat ? `<span style="display:inline-flex;align-items:center;gap:8px;">${catIcon(cat, 17)}<span>${cat.name}</span></span>` : '點擊選擇分類';
     }
 
     if (tx.type === 'expense') {
@@ -1340,7 +1417,7 @@ function renderHoldings(currentAcc) {
   const wrapper = container.firstElementChild;
 
   if (holdings.length === 0) {
-    wrapper.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">目前無任何持倉。請撳「+ 記一筆」並選擇 Buy 買入股票 ✨</p>';
+    wrapper.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">目前無任何持倉。請撳「+ 記一筆」並選擇 Buy 買入股票</p>';
     return;
   }
 
@@ -1398,14 +1475,14 @@ function renderTransactions(currentAcc) {
   container.innerHTML = '';
 
   if (accTxs.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">未有符合條件的交易紀錄 ✨</p>';
+    container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 40px 0;">未有符合條件的交易紀錄</p>';
     return;
   }
 
   if (pendingTxs.length > 0) {
     const pHeader = document.createElement('div');
     pHeader.className = 'tx-section-header';
-    pHeader.innerText = `🚩 待還 / Pending 項目 (${pendingTxs.length})`;
+    pHeader.innerText = `待還 / Pending 項目 (${pendingTxs.length})`;
     container.appendChild(pHeader);
 
     const pList = document.createElement('div');
@@ -1434,7 +1511,7 @@ function renderTransactions(currentAcc) {
 
     const div = document.createElement('div');
     div.className = 'month-divider';
-    div.innerHTML = `<span>📅 ${monthTitle}</span><span>${monthTxs.length} 筆明細</span>`;
+    div.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${uiIcon('calendar', 13)} ${monthTitle}</span><span>${monthTxs.length} 筆明細</span>`;
     container.appendChild(div);
 
     const list = document.createElement('div');
@@ -1449,7 +1526,7 @@ function createTxElement(tx, currentAcc) {
   const item = document.createElement('div');
   item.className = `tx-item ${isPending ? 'pending-item' : ''}`;
 
-  let icon = '📝';
+  let icon = uiIcon('file', 18);
   let title = tx.title || '交易';
   const cleanDate = normalizeDateString(tx.date);
   let catBadgeHtml = '';
@@ -1461,9 +1538,9 @@ function createTxElement(tx, currentAcc) {
     : (tx.toCurrency || currentAcc.currency));
 
   if (tx.type === 'adjust') {
-    icon = '⚖️';
+    icon = uiIcon('scale', 18);
     title = tx.title || '餘額調整';
-    catBadgeHtml = `<span class="tx-cat-chip">⚖️ 調整項目</span>`;
+    catBadgeHtml = `<span class="tx-cat-chip">調整項目</span>`;
     const numAmt = Number(tx.amount) || 0;
     if (numAmt >= 0) {
       amtClass = 'income';
@@ -1475,10 +1552,10 @@ function createTxElement(tx, currentAcc) {
   } else if (tx.type === 'expense' || tx.type === 'income') {
     const cat = categories.find(c => c.id === tx.categoryId);
     if (cat) {
-      icon = cat.icon || '🏷️';
+      icon = catIcon(cat, 18);
       const parent = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
       const catFullName = `${parent ? parent.name + ' > ' : ''}${cat.name}`;
-      catBadgeHtml = `<span class="tx-cat-chip">${cat.icon || '🏷️'} ${catFullName}</span>`;
+      catBadgeHtml = `<span class="tx-cat-chip">${catFullName}</span>`;
     }
     amtClass = tx.type;
 
@@ -1491,7 +1568,7 @@ function createTxElement(tx, currentAcc) {
       if (tx.foreignAmount && tx.foreignCurrency && tx.foreignCurrency !== displayCur) {
         const commStr = comm > 0 ? ` + 手續費 ${comm.toFixed(2)}` : '';
         const fxInfo = `包含 ${tx.foreignCurrency} ${Number(tx.foreignAmount).toFixed(2)} @ ${Number(tx.rate || 1).toFixed(4)}${commStr}`;
-        catBadgeHtml += `<span class="tx-cat-chip">🌐 ${fxInfo}</span>`;
+        catBadgeHtml += `<span class="tx-cat-chip">${fxInfo}</span>`;
       } else if (comm > 0) {
         catBadgeHtml += `<span class="tx-cat-chip">含手續費 ${fmtCur(comm, displayCur)}</span>`;
       }
@@ -1499,7 +1576,7 @@ function createTxElement(tx, currentAcc) {
       amtStr = `+${fmtCur(Number(tx.amount), displayCur)}`;
     }
   } else if (tx.type === 'transfer') {
-    icon = '🔁';
+    icon = uiIcon('repeat', 18);
     const toAcc = accounts.find(a => a.id === tx.toAccountId);
     const fromAcc = accounts.find(a => a.id === tx.accountId);
     const comm = Number(tx.commission) || 0;
@@ -1512,18 +1589,18 @@ function createTxElement(tx, currentAcc) {
       if (tx.toCurrency && tx.toCurrency !== tx.currency) {
         note += (note ? ' • ' : '') + `實收 ${fmtCur(Number(tx.toAmount || tx.amount), tx.toCurrency)}`;
       }
-      if (note) catBadgeHtml = `<span class="tx-cat-chip">🔁 ${note}</span>`;
+      if (note) catBadgeHtml = `<span class="tx-cat-chip">${note}</span>`;
     } else {
       title = `由 ${fromAcc ? fromAcc.name : ''} 轉入`;
       amtClass = 'income';
       const incomingAmt = Number(tx.toAmount || tx.amount);
       amtStr = `+${fmtCur(incomingAmt, displayCur)}`;
       if (tx.currency && tx.currency !== tx.toCurrency) {
-        catBadgeHtml = `<span class="tx-cat-chip">🔁 轉出 ${fmtCur(Number(tx.amount), tx.currency)}</span>`;
+        catBadgeHtml = `<span class="tx-cat-chip">轉出 ${fmtCur(Number(tx.amount), tx.currency)}</span>`;
       }
     }
   } else if (tx.type === 'exchange') {
-    icon = '💱';
+    icon = uiIcon('exchange', 18);
     const toAcc = accounts.find(a => a.id === tx.toAccountId);
     const fromAcc = accounts.find(a => a.id === tx.accountId);
     const comm = Number(tx.commission) || 0;
@@ -1547,27 +1624,27 @@ function createTxElement(tx, currentAcc) {
       }
     }
   } else if (tx.type === 'buy') {
-    icon = '📈';
+    icon = uiIcon('chart', 18);
     // 徹底移除 $
     title = `買入 ${tx.symbol} (${tx.shares} 股 @ ${tx.price})`;
     amtClass = 'expense';
     amtStr = `-${fmtCur(Number(tx.amount) + (Number(tx.commission) || 0), displayCur)}`;
-    catBadgeHtml = `<span class="tx-cat-chip">📈 證券買入</span>`;
+    catBadgeHtml = `<span class="tx-cat-chip">證券買入</span>`;
   } else if (tx.type === 'sell') {
-    icon = '📉';
+    icon = uiIcon('chartDown', 18);
     const comm = Number(tx.commission) || 0;
     // 徹底移除 $
     title = `賣出 ${tx.symbol} (${tx.shares} 股 @ ${tx.price})${comm > 0 ? ' • 佣金 ' + comm : ''}`;
     const netProceeds = Number(tx.amount) - comm;
     amtClass = 'income';
     amtStr = `+${fmtCur(netProceeds, displayCur)}`;
-    catBadgeHtml = `<span class="tx-cat-chip">📉 證券賣出</span>`;
+    catBadgeHtml = `<span class="tx-cat-chip">證券賣出</span>`;
   } else if (tx.type === 'dividend') {
-    icon = '📊';
+    icon = uiIcon('chart', 18);
     title = `收到 ${tx.symbol} 現金股息`;
     amtClass = 'income';
     amtStr = `+${fmtCur(Number(tx.amount), displayCur)}`;
-    catBadgeHtml = `<span class="tx-cat-chip">📊 股息入帳</span>`;
+    catBadgeHtml = `<span class="tx-cat-chip">股息入帳</span>`;
   }
 
   item.innerHTML = `
@@ -1581,7 +1658,7 @@ function createTxElement(tx, currentAcc) {
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
       <div class="tx-amt ${amtClass}">${amtStr}</div>
-      <button class="flag-toggle-btn ${isPending ? 'flagged' : ''}" title="切換待還狀態" onclick="event.stopPropagation(); toggleTxFlag('${tx.id}')">🚩</button>
+      <button class="flag-toggle-btn ${isPending ? 'flagged' : ''}" title="切換待還狀態" onclick="event.stopPropagation(); toggleTxFlag('${tx.id}')">${uiIcon('flag', 15)}</button>
     </div>
   `;
   return item;
@@ -2281,8 +2358,8 @@ function renderCategoryTree() {
     children.forEach(ch => {
       childRows += `
         <div class="cat-child-row">
-          <span>${ch.icon} ${ch.name}</span>
-          <button class="btn-action btn-secondary" style="padding: 2px 7px; font-size: 11px;" onclick="openEditCategoryModal('${ch.id}')">✎</button>
+          <span style="display:inline-flex;align-items:center;gap:8px;"><span class="cat-icon-tile-sm">${catIcon(ch, 15)}</span>${ch.name}</span>
+          <button class="btn-action btn-secondary" style="padding: 2px 7px; font-size: 11px;" onclick="openEditCategoryModal('${ch.id}')">${uiIcon('pencil', 12)}</button>
         </div>
       `;
     });
@@ -2291,12 +2368,12 @@ function renderCategoryTree() {
       <div class="cat-parent-row">
         <div onclick="toggleCatParentCollapse('${p.id}')" style="display: flex; align-items: center; gap: 6px; user-select: none;">
           <span style="font-size: 10px; transition: transform 0.2s; ${isCollapsed ? 'transform: rotate(-90deg);' : ''}">▼</span>
-          <span>${p.icon} ${p.name}</span>
+          <span style="display:inline-flex;align-items:center;gap:8px;"><span class="cat-icon-tile-sm">${catIcon(p, 15)}</span>${p.name}</span>
           <span style="font-size: 11px; color: var(--text-muted);">(${children.length})</span>
         </div>
         <div style="display: flex; gap: 5px;">
           <button class="btn-action btn-secondary" style="padding: 2px 7px; font-size: 11px;" onclick="openAddCategoryModal('${p.id}')">+ 子類別</button>
-          <button class="btn-action btn-secondary" style="padding: 2px 7px; font-size: 11px;" onclick="openEditCategoryModal('${p.id}')">✎</button>
+          <button class="btn-action btn-secondary" style="padding: 2px 7px; font-size: 11px;" onclick="openEditCategoryModal('${p.id}')">${uiIcon('pencil', 12)}</button>
         </div>
       </div>
       ${children.length > 0 ? `<div class="cat-child-list" style="display: ${isCollapsed ? 'none' : 'block'};">${childRows}</div>` : ''}
@@ -2362,7 +2439,7 @@ window.deleteCurrentCategory = function() {
 };
 
 window.openReportModal = function() {
-  document.getElementById('report-modal-title').innerText = `📈 Net Worth Over Time (${baseCurrency})`;
+  document.getElementById('report-modal-title').innerText = `Net Worth Over Time (${baseCurrency})`;
   openModal('report-modal');
   renderNetWorthChart();
 };

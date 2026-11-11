@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#F2F2F7">
+  <meta name="theme-color" content="#FFFFFF">
 
   <!-- iOS 桌面圖示 (Apple Touch Icon) -->
   <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180' width='180' height='180'><rect width='180' height='180' rx='42' fill='%23343A40'/><path d='M36 68 C36 65 39 63 42 63 L48 63 L56 36 C57 32 63 32 66 35 L75 48 C95 44 116 46 132 54 C148 63 158 78 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 L95 153 C95 157 91 160 86 160 L78 160 C74 160 71 157 71 153 L71 146 L55 146 L55 153 C55 157 51 160 47 160 L39 160 C34 160 31 157 31 153 L31 138 C23 128 18 115 18 100 C18 97 18 95 18 92 L14 92 C10 92 7 89 7 85 L7 75 C7 71 10 68 14 68 Z' fill='%23FFC107'/><path d='M95 45 C109 45 123 48 135 55 C150 64 158 79 158 96 C158 108 154 118 146 126 C147 130 152 135 158 135 C163 135 166 130 166 123 C166 121 169 119 171 121 C173 123 173 126 172 130 C169 142 161 147 151 146 C145 145 139 140 135 136 C123 143 109 146 95 146 Z' fill='%23FFA000' opacity='0.35'/><rect x='80' y='52' width='30' height='7' rx='3.5' fill='%23343A40'/><circle cx='54' cy='78' r='6' fill='%23343A40'/><circle cx='95' cy='102' r='28' fill='%23FFD54F' stroke='%23343A40' stroke-width='4'/><circle cx='95' cy='102' r='24' fill='none' stroke='%23343A40' stroke-width='1.5' stroke-dasharray='3 2'/><text x='95' y='111' font-size='26' font-family='-apple-system, sans-serif' font-weight='900' fill='%23343A40' text-anchor='middle'>$</text></svg>">
@@ -29,23 +29,23 @@
   <header id="app-global-header">
     <div class="header-left">
       <div class="net-worth-box" onclick="switchMainTab('accounts'); openReportModal();" title="點擊檢視資產走勢">
-        <span class="net-worth-title" id="header-networth-title">Net Worth (CAD 📈)</span>
+        <span class="net-worth-title" id="header-networth-title">Net Worth (CAD)</span>
         <!-- 移除 $ 符號 -->
         <span class="net-worth-amt" id="total-net-worth">0.00</span>
       </div>
     </div>
     <div class="header-right">
       <button class="sync-status" id="btn-manual-sync" type="button" onclick="manualSyncTrigger()" title="點擊連線並同步 Google Sheet">
-        <span id="sync-icon">☁️</span> <span id="sync-text">已同步</span>
+        <span id="sync-icon" class="sync-ic"></span> <span id="sync-text">已同步</span>
       </button>
 
       <!-- 電腦版快速導覽漢堡選單 (手機端自動隱藏) -->
       <div class="desktop-menu-container" style="position: relative; display: inline-block;">
         <button id="btn-desktop-menu" type="button" class="btn-action btn-secondary" onclick="toggleDesktopMenu()" style="width: 36px; height: 36px; padding: 0; font-size: 16px;">☰</button>
         <div id="desktop-nav-dropdown" class="desktop-dropdown-menu" style="display: none;">
-          <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">🪪 戶口主頁</button>
-          <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">🚩 內部借貸</button>
-          <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">⚙️ 系統設定</button>
+          <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">戶口主頁</button>
+          <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">內部借貸</button>
+          <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">系統設定</button>
         </div>
       </div>
     </div>
@@ -60,7 +60,7 @@
         <!-- 頂部操作膠囊按鈕組（編輯、＋帳戶、＋分組） -->
         <div class="top-action-bar">
           <button id="btn-toggle-edit-mode" class="capsule-btn" type="button" onclick="toggleEditMode()" style="flex: 1;">
-            <span class="btn-icon">✏️</span> <span id="txt-edit-mode">編輯</span>
+            <span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></span> <span id="txt-edit-mode">編輯</span>
           </button>
           <button class="capsule-btn" type="button" onclick="openAccountModal()" style="flex: 1.2;">
             <span class="btn-icon" style="color: #007AFF;">＋</span> 帳戶
@@ -86,8 +86,8 @@
               </div>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">📑 對帳單</button>
-              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定">✏️</button>
+              <button class="btn-action btn-secondary" id="btn-statement-entry" onclick="openStatementModal()" style="display: none;">對帳單</button>
+              <button class="btn-action btn-secondary" onclick="openEditAccountModal()" title="帳戶設定"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
               <button class="btn-action" onclick="openTxPage(null)" title="記一筆">＋</button>
               <!-- 帳戶明細頂部純狀態同步指示燈 -->
               <span id="detail-sync-dot" class="sync-dot-indicator synced" title="已同步"></span>
@@ -95,7 +95,7 @@
           </div>
 
           <div class="search-bar-wrap">
-            <span>🔍</span>
+            <span class="search-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
             <input type="text" class="search-input" id="tx-search-input" placeholder="搜尋交易商戶、分類、備註、日期..." oninput="handleSearchInput(this.value)">
           </div>
 
@@ -115,7 +115,7 @@
     <!-- View 2: 內部待還款中心獨立 View -->
     <div id="view-debt-tracker" class="main-page-view" style="display: none;">
       <div class="page-view-header">
-        <h2 style="font-size: 18px; font-weight: 700;">🚩 內部借貸待還中心</h2>
+        <h2 style="font-size: 18px; font-weight: 700;">內部借貸待還中心</h2>
         <!-- 移除 $ 符號 -->
         <div id="debt-summary-badge" style="font-size: 13px; font-weight: 700; color: #D95D5D;">待還總額: 0.00</div>
       </div>
@@ -125,7 +125,7 @@
     <!-- View 3: 系統設定獨立 Page View -->
     <div id="view-settings" class="main-page-view" style="display: none;">
       <div class="page-view-header">
-        <h2 style="font-size: 18px; font-weight: 700;">⚙️ 系統設定</h2>
+        <h2 style="font-size: 18px; font-weight: 700;">系統設定</h2>
       </div>
       <div class="settings-page-content">
         <div class="settings-card">
@@ -173,7 +173,7 @@
 
         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
           <input type="checkbox" id="tx-is-pending" style="width: 18px; height: 18px; cursor: pointer;">
-          <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">🚩 標記為待還款（內部借貸合約）</label>
+          <label for="tx-is-pending" style="font-size: 13px; font-weight: 600; cursor: pointer;">標記為待還款（內部借貸合約）</label>
         </div>
 
         <!-- 帳戶與交易幣種並排選單 -->
@@ -237,7 +237,7 @@
             <label>匯率 (Rate: 1 外幣 = ? 帳戶本幣)</label>
             <div style="display: flex; gap: 8px;">
               <input type="number" step="0.0001" id="tx-foreign-rate" placeholder="0.0000" style="flex: 1;" oninput="handleExpenseRateInput()">
-              <button type="button" class="btn-action btn-secondary" onclick="fetchLiveExpenseFX(false)" style="font-size: 11px; height: 38px; padding: 0 12px;">🌐 即時匯率</button>
+              <button type="button" class="btn-action btn-secondary" onclick="fetchLiveExpenseFX(false)" style="font-size: 11px; height: 38px; padding: 0 12px;">即時匯率</button>
             </div>
           </div>
 
@@ -261,7 +261,7 @@
             <label>匯率</label>
             <div style="display: flex; gap: 8px;">
               <input type="number" step="0.0001" id="tx-exchange-rate" placeholder="0.0000" style="flex: 1;" oninput="handleExchangeInput('rate')">
-              <button class="btn-action btn-secondary" type="button" onclick="fetchLiveExchangeRate(true)">🌐 即時匯率</button>
+              <button class="btn-action btn-secondary" type="button" onclick="fetchLiveExchangeRate(true)">即時匯率</button>
             </div>
           </div>
         </div>
@@ -276,7 +276,7 @@
             <label>股票代號</label>
             <div style="display: flex; gap: 8px;">
               <input type="text" id="tx-stock-symbol" placeholder="例如：HXT.TO / AAPL" oninput="this.value = this.value.toUpperCase()" style="flex: 1;">
-              <button class="btn-action btn-secondary" id="btn-quote-search" type="button" onclick="fetchQuoteForInput()">🔍 查市價</button>
+              <button class="btn-action btn-secondary" id="btn-quote-search" type="button" onclick="fetchQuoteForInput()">查市價</button>
             </div>
           </div>
           <div class="form-group" id="stock-shares-box">
@@ -303,7 +303,7 @@
         </div>
 
         <button type="button" id="btn-delete-tx-page" class="btn-action btn-secondary" style="margin-top: 24px; color: #D95D5D; display: none; padding: 12px;" onclick="deleteCurrentTxFromPage()">
-          🗑️ 刪除此交易
+          刪除此交易
         </button>
       </div>
     </div>
@@ -315,23 +315,23 @@
   <!-- 底部 iOS 4 鍵 Tab Bar -->
   <nav class="ios-tab-bar">
     <button class="tab-item active" id="tab-btn-accounts" type="button" onclick="switchMainTab('accounts')">
-      <div class="tab-pill">🪪</div>
+      <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></div>
       <span>戶口</span>
     </button>
     
     <!-- 拍照記帳快捷鍵 (無框純淨圖標) -->
     <button class="tab-item tab-action-camera" type="button" onclick="triggerBottomCamera()">
-      <div class="tab-pill">📷</div>
+      <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
       <span>拍照</span>
     </button>
     
     <button class="tab-item" id="tab-btn-debts" type="button" onclick="switchMainTab('debts')">
-      <div class="tab-pill">🚩</div>
+      <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
       <span>借貸</span>
     </button>
     
     <button class="tab-item" id="tab-btn-settings" type="button" onclick="switchMainTab('settings')">
-      <div class="tab-pill">⚙️</div>
+      <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="white"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.2" fill="white"/></svg></div>
       <span>設定</span>
     </button>
   </nav>
@@ -355,7 +355,7 @@
           <input type="text" id="edit-cat-name" placeholder="例如：Car Insurance / Salary">
         </div>
         <div class="form-group">
-          <label>Emoji 圖標</label>
+          <label>圖標（新版依分類名稱自動配線條圖示，呢欄可留空）</label>
           <input type="text" id="edit-cat-icon" placeholder="例如：🚗 / 💼">
         </div>
       </div>
@@ -424,8 +424,8 @@
         <input type="hidden" id="group-theme" value="pink">
         
         <div class="form-group">
-          <label>自選圖示 (Emoji)</label>
-          <input type="text" id="group-icon" placeholder="例如：🏦、💳、📈、📁" maxlength="4" style="font-size: 18px;">
+          <label>自選圖示（新版改用線條圖示，呢欄可留空）</label>
+          <input type="text" id="group-icon" placeholder="可留空" maxlength="4" style="font-size: 18px;">
         </div>
 
         <div class="form-group">
@@ -453,7 +453,7 @@
   <div class="modal-overlay" id="report-modal">
     <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
-        <span id="report-modal-title">📈 Net Worth Over Time (資產走勢)</span>
+        <span id="report-modal-title">Net Worth Over Time (資產走勢)</span>
         <button onclick="closeModal('report-modal')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
       </div>
       <div class="modal-body">
@@ -570,7 +570,7 @@
         <button type="button" onclick="closeModal('cat-picker-drawer')" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
       </div>
       <div style="padding: 10px 18px 4px 18px;">
-        <input type="text" id="cat-picker-search" class="search-input" placeholder="🔍 搜尋分類..." oninput="filterPickerCategories(this.value)" style="width: 100%;">
+        <input type="text" id="cat-picker-search" class="search-input" placeholder="搜尋分類..." oninput="filterPickerCategories(this.value)" style="width: 100%;">
       </div>
       <div class="modal-body" id="cat-picker-list" style="overflow-y: auto; padding: 8px 18px;"></div>
     </div>

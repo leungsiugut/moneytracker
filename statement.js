@@ -136,5 +136,5 @@ window.saveStatement = function() {
 
   closeModal('statement-modal');
   saveData();
-  alert(`成功建立對帳單「${name}」！已鎖定 ${selectedTxIds.length} 筆明細。✨`);
+  alert(`成功建立對帳單「${name}」！已鎖定 ${selectedTxIds.length} 筆明細。`);
 };
