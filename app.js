@@ -435,12 +435,48 @@ function fmtCur(amt, cur = 'CAD') {
 // ==========================================
 // 雙向同步核心流程加固（先 Push 後 Pull）
 // ==========================================
+// 帳單清單同步轉換：送上去嗰陣剔走 txIds（陣列唔入得 Sheets 儲存格，靠每條數嘅 statementId 隨時砌返），
+// 只保留 Statement tab 要嘅欄位，順序即係 tab 嘅欄位順序
+function serializeStatementsForSync(list) {
+  return (list || []).map(s => ({
+    id: s.id,
+    accountId: s.accountId,
+    name: s.name,
+    dueDate: s.dueDate || '',
+    targetAmount: s.targetAmount || 0,
+    isPaid: !!s.isPaid,
+    paidDate: s.paidDate || ''
+  }));
+}
+
+// 拉返落嚟嗰陣將 Sheet 嘅行還原成帳單物件，並靠 transactions 嘅 statementId 砌返 txIds
+function deserializeStatementsFromSync(rows) {
+  return (rows || []).map(row => ({
+    id: row.id,
+    accountId: row.accountId,
+    name: row.name,
+    dueDate: row.dueDate ? normalizeDateString(row.dueDate) : '',
+    targetAmount: parseFloat(row.targetAmount) || 0,
+    txIds: transactions.filter(t => t.statementId === row.id).map(t => t.id),
+    isPaid: row.isPaid === true || row.isPaid === 'TRUE' || row.isPaid === 'Yes',
+    paidDate: row.paidDate ? normalizeDateString(row.paidDate) : ''
+  }));
+}
+
 window.pushToGoogleSheet = async function() {
   if (!SCRIPT_URL) return false;
   try {
     const debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+    const creditStatements = serializeStatementsForSync(JSON.parse(localStorage.getItem('wiz_credit_statements')) || []);
     const newSymbols = window.pendingNewSymbols || [];
-    const payload = { accounts, groups, categories, transactions, debtRepayments, newSymbols };
+    // 送上去之前補齊每條數嘅 statementId／isPaid 欄位（冇值都俾空字串／false），
+    // 等 Transactions tab 嘅欄位齊全 — Apps Script 係用第一條數嘅 key 做欄名，唔補齊會漏欄
+    const syncTransactions = transactions.map(t => ({
+      ...t,
+      statementId: t.statementId || '',
+      isPaid: t.isPaid === true || String(t.isPaid).trim().toUpperCase() === 'TRUE'
+    }));
+    const payload = { accounts, groups, categories, transactions: syncTransactions, debtRepayments, creditStatements, newSymbols };
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -467,6 +503,12 @@ window.pullFromGoogleSheet = async function() {
   if (data.transactions) transactions = data.transactions;
   if (data.debtRepayments && Array.isArray(data.debtRepayments)) {
     localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
+  }
+
+  if (data.creditStatements && Array.isArray(data.creditStatements) && data.creditStatements.length > 0) {
+    const rebuiltStatements = deserializeStatementsFromSync(data.creditStatements);
+    creditStatements = rebuiltStatements;
+    localStorage.setItem('wiz_credit_statements', JSON.stringify(rebuiltStatements));
   }
 
   if (data.stockPrices && Array.isArray(data.stockPrices)) {
@@ -1354,6 +1396,10 @@ function setupEditTxForm(txId) {
   if (pendingEl) {
     pendingEl.checked = (tx.isPending === true || String(tx.isPending).trim().toUpperCase() === 'TRUE');
   }
+  const paidEl = document.getElementById('tx-is-paid');
+  if (paidEl) {
+    paidEl.checked = (tx.isPaid === true || String(tx.isPaid).trim().toUpperCase() === 'TRUE');
+  }
   
   setupModalTypeTabs(isInvest);
   populateTransferAccountSelects(tx.accountId, tx.toAccountId);
@@ -2119,6 +2165,8 @@ window.saveTransaction = function() {
   const id = document.getElementById('tx-id').value;
   const date = normalizeDateString(document.getElementById('tx-date').value);
   const isPending = document.getElementById('tx-is-pending').checked;
+  const isPaidEl = document.getElementById('tx-is-paid');
+  const isPaid = isPaidEl ? isPaidEl.checked : false;
   
   const activeAccountId = document.getElementById('tx-from-acc').value || currentAccountId || (accounts[0] ? accounts[0].id : '');
   const activeAcc = accounts.find(a => a.id === activeAccountId);
@@ -2130,7 +2178,8 @@ window.saveTransaction = function() {
     accountId: activeAccountId, 
     currency: baseCur,
     date, 
-    isPending 
+    isPending,
+    isPaid
   };
 
   if (currentTxType === 'adjust') {
