@@ -615,26 +615,89 @@ window.handleOCRImageSelected = async function(event) {
       if (!text || text.length < 2) return true;
       if (/^[\\\/\|\sA-Za-z]{1,4}$/.test(text) && (text.includes('\\') || text.includes('/'))) return true;
       const lower = text.toLowerCase();
-      const blackList = [
+      // 短語類：用 includes 安全（唔會誤傷商戶名入面嘅字）
+      const phraseList = [
         'apple card', 'apple pay', 'wealthsimple', 'approved', 'declined',
-        'status:', '狀態', '已批核', '總計', 'total', 'done', '完成',
-        'kennedy', 'avenue', 'ave', 'road', 'rd', 'blvd', 'street', 'st',
-        'church', 'baptist', 'report', 'incorrect', 'merchant', '聯絡', '報告'
+        'status:', '狀態', '已批核', '總計', 'total', 'done', '完成', '聯絡', '報告'
       ];
-      return blackList.some(k => lower.includes(k));
+      if (phraseList.some(k => lower.includes(k))) return true;
+      // 街道尾綴／地圖詞：一定要成個字先算數
+      // （舊版用 includes 會誤殺 Dave（a-ve）、Buster's（bu-st-er）、PRESTO、Starbucks、Costco 呢啲正經商戶名）
+      const wordList = [
+        'ave', 'avenue', 'rd', 'road', 'st', 'street', 'blvd',
+        'kennedy', 'church', 'baptist', 'merchant', 'report', 'incorrect', 'contact'
+      ];
+      return wordList.some(k => new RegExp('\\b' + k + '\\b').test(lower));
     };
+
+    // ==== 商戶名文字質素閘：擋 OCR 亂碼、日期時間、純金額 ====
+    const isPlausibleTitle = (text) => {
+      if (!text) return false;
+      const t = text.trim();
+      if (t.length < 2 || t.length > 60) return false;
+      if (isNoise(t)) return false;
+      if (/[=|»«<>~^`\\]/.test(t)) return false;                    // OCR 亂碼符號
+      if (/\d{1,2}[:\/]\d{2}/.test(t)) return false;               // 時間／日期片段
+      if (/^\d[\d\s.,\/-]*$/.test(t)) return false;                // 純數字日期金額殘段
+      if (/\$\s*\d/.test(t)) return false;                          // 含金額
+      const compact = t.replace(/\s/g, '');
+      const letterCount = (compact.match(/[A-Za-z\u4e00-\u9fff]/g) || []).length;
+      if (letterCount / compact.length < 0.6) return false;          // 字母比例太低
+      if (!/[A-Za-z]{2,}|[\u4e00-\u9fff]{2,}/.test(t)) return false; // 至少一個似樣嘅字
+      return true;
+    };
+    const cleanCandidate = (line) => line ? line.split(',')[0].trim() : '';
+    const normalizeName = (s) => s.toLowerCase().replace(/\s+/g, ' ').replace(/[.\u3002]+$/, '').trim();
 
     let guessedTitle = '';
 
-    if (amtLineIdx !== -1 && amtLineIdx + 1 < rawLines.length) {
-      let candidate = rawLines[amtLineIdx + 1];
-      candidate = candidate.split(',')[0].trim();
-      if (!isNoise(candidate)) {
-        guessedTitle = candidate;
+    // 策略一（最優先）：重複出現嘅名
+    // Apple Wallet 版面入面，同一個商戶名會出現兩次 — 地圖圖釘標籤 + 地圖下面嗰行黑字；
+    // 附近其他舖頭名（戲院、傢俬舖嗰啲地圖標籤）只會出現一次，靠重複就可以分辨真商戶。
+    if (!guessedTitle) {
+      const seen = new Map();
+      rawLines.forEach((line, idx) => {
+        const c = cleanCandidate(line);
+        if (!isPlausibleTitle(c)) return;
+        const key = normalizeName(c);
+        if (!seen.has(key)) seen.set(key, { text: c, count: 0, lastIdx: -1 });
+        const rec = seen.get(key);
+        rec.count++;
+        rec.lastIdx = idx;
+      });
+      let best = null;
+      seen.forEach((rec) => {
+        if (rec.count >= 2 && (!best || rec.lastIdx > best.lastIdx)) best = rec;
+      });
+      if (best) guessedTitle = best.text;
+    }
+
+    // 策略二：由「聯絡／報告」行向上掃 — 地圖下面嗰行黑字商戶名就喺呢啲掣嘅上面
+    if (!guessedTitle) {
+      let anchor = -1;
+      for (let i = 0; i < rawLines.length; i++) {
+        const l = rawLines[i];
+        if (l.includes('聯絡') || l.includes('報告') || /contact|report/i.test(l)) { anchor = i; break; }
+      }
+      if (anchor > 0) {
+        for (let i = anchor - 1; i >= 0 && i >= anchor - 4; i--) {
+          const c = cleanCandidate(rawLines[i]);
+          if (isPlausibleTitle(c)) { guessedTitle = c; break; }
+        }
       }
     }
 
-    if (!guessedTitle || guessedTitle.length < 2) {
+    // 策略三（後備）：金額嗰行之後向前掃 — 灰字商戶行
+    // 冇地圖嘅交易靠呢個（例如交通卡增值）；第一行唔合格會繼續掃，唔會死攬亂碼行
+    if (!guessedTitle && amtLineIdx !== -1) {
+      for (let i = amtLineIdx + 1; i < rawLines.length && i <= amtLineIdx + 4; i++) {
+        const c = cleanCandidate(rawLines[i]);
+        if (isPlausibleTitle(c)) { guessedTitle = c; break; }
+      }
+    }
+
+    // 策略四（最後後備）：狀態區之後掃描（舊策略，加咗質素閘）
+    if (!guessedTitle) {
       let statusSeen = false;
       for (let i = 0; i < rawLines.length; i++) {
         const line = rawLines[i];
@@ -646,18 +709,13 @@ window.handleOCRImageSelected = async function(event) {
           if (line.includes('聯絡') || line.includes('報告') || line.toLowerCase().includes('contact')) {
             break;
           }
-          const cleaned = line.split(',')[0].trim();
-          if (!isNoise(cleaned) && cleaned.length >= 2) {
-            guessedTitle = cleaned;
-            break;
-          }
+          const c = cleanCandidate(line);
+          if (isPlausibleTitle(c)) { guessedTitle = c; break; }
         }
       }
     }
 
-    if (!guessedTitle) {
-      guessedTitle = 'Wallet 交易';
-    }
+    // 全部策略都搵唔到就留空，唔再填「Wallet 交易」假名俾用家刪
 
     let guessedDate = new Date().toISOString().split('T')[0];
     const dateMatch = fullText.match(/\b(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/) || fullText.match(/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/);
