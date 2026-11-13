@@ -23,9 +23,9 @@ window.getTxDebtState = function(txId) {
   let remain = origAmt;
   let displayCur = acctCur;
   let hasAdjust = false;
-  debtRepayments.filter(r => r.txId === txId).forEach(r => {
+  debtRepayments.filter(r => r && typeof r === 'object' && r.txId === txId).forEach(r => {
     const amt = parseFloat(r.amount || 0);
-    const cur = r.currency || acctCur;
+    const cur = String(r.currency || '').trim() || acctCur;
     if (window.debtRecordType(r) === 'adjust') {
       remain = convertAmount(amt, cur, acctCur);
       displayCur = cur;
@@ -273,7 +273,7 @@ window.openRepayLogModal = function(txId) {
   container.innerHTML = '';
 
   debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
-  const logs = debtRepayments.filter(r => r.txId === txId).sort((a, b) => new Date(cleanDateStr(b.date)) - new Date(cleanDateStr(a.date)));
+  const logs = debtRepayments.filter(r => r && typeof r === 'object' && r.txId === txId).sort((a, b) => new Date(cleanDateStr(b.date)) - new Date(cleanDateStr(a.date)));
 
   // 頂部總結（純顯示：原額／已補回／仲差，數字全部來自現有資料與 getTxRepaidAmount）
   // 注意：要等記錄列表 render 完先插入最頂，因為空記錄嗰句會用 innerHTML 成個 container 洗版
@@ -312,7 +312,7 @@ window.openRepayLogModal = function(txId) {
     logs.forEach(log => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 4px; border-bottom:1px solid #F2F2F7; font-size:13px;';
-      const logCur = log.currency || logAcctCur;
+      const logCur = String(log.currency || '').trim() || logAcctCur;
       if (window.debtRecordType(log) === 'adjust') {
         row.innerHTML = `
         <div>

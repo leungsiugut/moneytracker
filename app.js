@@ -469,11 +469,13 @@ window.pushToGoogleSheet = async function() {
     const rawDebtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
     // 一樣補齊每條借貸記錄嘅 type／currency 欄位（冇 type 當 repay、冇 currency 留空字串），
     // 等 DebtRepayments tab 穩定有呢兩欄，唔會因為第一條記錄冇呢啲 key 而漏欄；已有嘅值原封不動
-    const debtRepayments = rawDebtRepayments.map(r => ({
-      ...r,
-      type: String(r.type || '').trim().toLowerCase() === 'adjust' ? 'adjust' : 'repay',
-      currency: r.currency || ''
-    }));
+    const debtRepayments = rawDebtRepayments
+      .filter(r => r && typeof r === 'object')
+      .map(r => ({
+        ...r,
+        type: String(r.type || '').trim().toLowerCase() === 'adjust' ? 'adjust' : 'repay',
+        currency: r.currency || ''
+      }));
     const creditStatements = serializeStatementsForSync(JSON.parse(localStorage.getItem('wiz_credit_statements')) || []);
     const newSymbols = window.pendingNewSymbols || [];
     // 送上去之前補齊每條數嘅 statementId／isPaid 欄位（冇值都俾空字串／false），
@@ -1100,23 +1102,41 @@ window.toggleGroupCollapse = function(grpId) {
 };
 
 window.renderApp = function() {
-  let totalNetWorthInBase = 0;
-  accounts.forEach(acc => {
-    const accVal = getAccountTotalValue(acc.id);
-    totalNetWorthInBase += convertAmount(accVal, acc.currency || 'CAD', baseCurrency);
+  // 每段 render 分開行 + 分開 try/catch：任何一段出 error 都唔好拖死成個 renderApp，
+  // 否則 saveData 會跟住爆，搞到儲存／刪除之後個畫面收唔到（2026-11-12 隔離修復）。
+  // 出事嗰段會記錄低，每個 session 最多彈一次 alert 講明邊段出事，俾 Lok 影低回報。
+  const sectionErrors = [];
+  const runSection = (name, fn) => {
+    try { fn(); } catch (e) {
+      console.error('render 失敗（' + name + '）：', e);
+      sectionErrors.push(name + '：' + (e && e.message ? e.message : e));
+    }
+  };
+
+  runSection('淨值標題', () => {
+    let totalNetWorthInBase = 0;
+    accounts.forEach(acc => {
+      const accVal = getAccountTotalValue(acc.id);
+      totalNetWorthInBase += convertAmount(accVal, acc.currency || 'CAD', baseCurrency);
+    });
+
+    const titleEl = document.getElementById('header-networth-title');
+    const amtEl = document.getElementById('total-net-worth');
+    if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency})`;
+    // 移除 $ 符號
+    if (amtEl) amtEl.innerText = `${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   });
 
-  const titleEl = document.getElementById('header-networth-title');
-  const amtEl = document.getElementById('total-net-worth');
-  if (titleEl) titleEl.innerText = `Net Worth (${baseCurrency})`;
-  // 移除 $ 符號
-  if (amtEl) amtEl.innerText = `${totalNetWorthInBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (typeof window.renderAccountsView === 'function') runSection('戶口清單', () => window.renderAccountsView());
+  runSection('戶口明細', renderDetailView);
+  if (window.renderDebtTrackerView) runSection('借貸頁', () => window.renderDebtTrackerView());
+  runSection('分類樹', renderCategoryTree);
+  runSection('同步狀態', updateSyncStatusUI);
 
-  if (typeof window.renderAccountsView === 'function') window.renderAccountsView();
-  renderDetailView();
-  if (window.renderDebtTrackerView) window.renderDebtTrackerView();
-  renderCategoryTree();
-  updateSyncStatusUI();
+  if (sectionErrors.length > 0 && !window.__renderErrorAlerted) {
+    window.__renderErrorAlerted = true;
+    alert('⚠️ 畫面有一部分更新失敗（資料冇事，儲存／刪除照常完成）：\n' + sectionErrors.join('\n') + '\n麻煩影低呢個畫面話返俾小黃知 🙏');
+  }
 };
 
 window.selectAccount = function(accId) {
@@ -1328,9 +1348,16 @@ window.closeTxPage = function() {
 };
 
 window.saveTransactionFromPage = function() {
-  const success = saveTransaction();
-  if (success !== false) {
-    closeTxPage();
+  // 加 try/catch：如果儲存過程有任何 error，彈出錯誤內容俾 Lok 影低回報，
+  // 好過畫面靜靜凍結乜都冇（2026-11-12 診斷用；正常路徑行為完全冇變）
+  try {
+    const success = saveTransaction();
+    if (success !== false) {
+      closeTxPage();
+    }
+  } catch (e) {
+    console.error('儲存交易失敗：', e);
+    alert('⚠️ 儲存嗰陣出咗錯，條交易可能已經存咗但畫面未更新。\n錯誤：' + (e && e.name ? e.name + '：' : '') + (e && e.message ? e.message : e) + '\n麻煩影低呢個畫面話返俾小黃知 🙏');
   }
 };
 
