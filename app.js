@@ -66,7 +66,33 @@ const DEFAULT_ACCOUNTS = [
 let categories = JSON.parse(localStorage.getItem('wiz_cats_cloud')) || DEFAULT_CATEGORIES;
 let groups = JSON.parse(localStorage.getItem('wiz_grps_cloud')) || DEFAULT_GROUPS;
 let accounts = JSON.parse(localStorage.getItem('wiz_accs_cloud')) || DEFAULT_ACCOUNTS;
-let transactions = JSON.parse(localStorage.getItem('wiz_txs_cloud')) || [];
+// === A 方案（2026-11-13）：交易歷史唔再成份存 localStorage ===
+// 歷史以 Sheet 為準，開 app 拉落嚟放記憶體用；本地只留結餘快照 + 未同步改動（pending ops）。
+// 舊版留低嘅 wiz_txs_cloud 只會喺今次載入讀多最後一次（遷移），之後由 finalizeTxCacheMigration 清走。
+let transactions = [];
+let txDataComplete = false;   // 記憶體入面係唔係完整歷史（嚟自舊 cache 或已完成 pull）— 未完整唔准 push
+let txLoadedFromCache = false; // 今次係靠舊 wiz_txs_cloud 載入（遷移中）
+let balanceSnapshot = null;    // { at, balances: {accId:{cash,total}}, foldedIds: [] } 未載入完成時用嚟顯示結餘
+try { balanceSnapshot = JSON.parse(localStorage.getItem('wiz_balance_snapshot')) || null; } catch (e) { balanceSnapshot = null; }
+try {
+  const cachedTxs = localStorage.getItem('wiz_txs_cloud');
+  if (cachedTxs) {
+    transactions = JSON.parse(cachedTxs) || [];
+    txDataComplete = true;
+    txLoadedFromCache = true;
+  }
+} catch (e) { transactions = []; txDataComplete = false; txLoadedFromCache = false; }
+// 未同步改動入面嘅交易先入返記憶體：離線重開都睇到嗰幾筆、結餘計得返（pull 完成後會正式合併）
+try {
+  const pendingRaw = JSON.parse(localStorage.getItem('wiz_pending_uploads')) || [];
+  if (Array.isArray(pendingRaw)) {
+    pendingRaw.forEach(o => {
+      if (o && o.op === 'upsert' && o.tx && o.tx.id && !transactions.some(t => t.id === o.tx.id)) {
+        transactions.push(o.tx);
+      }
+    });
+  }
+} catch (e) {}
 let stockPriceCache = JSON.parse(localStorage.getItem('wiz_stock_cache_cloud')) || { 'HXT.TO': 98.50, 'AAPL': 225.00 };
 
 let collapsedGroups = JSON.parse(localStorage.getItem('wiz_collapsed_groups')) || {};
@@ -127,17 +153,80 @@ window.toggleEditMode = function() {
 // =======================
 // 待同步佇列 (Pending Outbox)
 // =======================
+// A 方案：pending 佇列升級做「未同步改動記錄」（ops）— upsert 存成條交易、delete 存 id、touch 只係 dirty 標記。
+// 舊格式（純 id 字串）讀嗰陣自動當 touch，唔會唔見。改動喺 saveData嗰陣即刻記低，
+// 就算 push 失敗 + 重開 app，pull 之後 applyPendingOpsToTransactions 會合併返再補推。
 function getPendingUploads() {
-  return JSON.parse(localStorage.getItem('wiz_pending_uploads')) || [];
+  try {
+    const raw = JSON.parse(localStorage.getItem('wiz_pending_uploads')) || [];
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map(o => (typeof o === 'string' ? { op: 'touch', id: o } : o))
+      .filter(o => o && typeof o === 'object');
+  } catch (e) { return []; }
 }
 
-function addPendingUpload(txId) {
-  const list = getPendingUploads();
-  if (!list.includes(txId)) {
-    list.push(txId);
-    localStorage.setItem('wiz_pending_uploads', JSON.stringify(list));
+function savePendingOps(ops) {
+  try {
+    if (ops.length > 0) localStorage.setItem('wiz_pending_uploads', JSON.stringify(ops));
+    else localStorage.removeItem('wiz_pending_uploads');
+  } catch (e) { console.error('待同步佇列寫入失敗：', e); }
+}
+
+function recordPendingOpFor(txId) {
+  const ops = getPendingUploads();
+  const tx = txId ? transactions.find(t => t.id === txId) : null;
+  if (tx) {
+    const filtered = ops.filter(o => o.id !== txId);
+    filtered.push({ op: 'upsert', id: txId, tx: JSON.parse(JSON.stringify(tx)) });
+    savePendingOps(filtered);
+  } else if (txId) {
+    // 交易唔喺記憶體：可能係刪除（deleteCurrentTx 會另外記 delete op）或其他模組嘅改動 — 留個 touch 標記確保會補推
+    if (!ops.some(o => o.id === txId)) {
+      ops.push({ op: 'touch', id: txId });
+      savePendingOps(ops);
+    }
+  } else if (!ops.some(o => o.op === 'touch' && !o.id)) {
+    ops.push({ op: 'touch', id: '' });
+    savePendingOps(ops);
   }
+}
+
+// 刪除交易專用：即刻記低 delete op，唔好等 saveData（嗰陣交易已經唔喺記憶體，認唔返係刪除）
+window.notePendingTxDelete = function(txId) {
+  if (!txId) return;
+  const ops = getPendingUploads().filter(o => o.id !== txId);
+  ops.push({ op: 'delete', id: txId });
+  savePendingOps(ops);
+};
+
+function addPendingUpload(txId) {
+  recordPendingOpFor(txId);
   updateSyncStatusUI();
+}
+
+// pull 成功後，將未同步改動套返入啱啱拉落嚟嘅完整歷史（upsert 蓋／加、delete 移除；touch 唔掂資料但代表有嘢要補推）
+function applyPendingOpsToTransactions() {
+  const ops = getPendingUploads();
+  if (ops.length === 0) return false;
+  ops.forEach(o => {
+    if (!o) return;
+    if (o.op === 'upsert' && o.tx && o.tx.id) {
+      const idx = transactions.findIndex(t => t.id === o.tx.id);
+      if (idx >= 0) transactions[idx] = o.tx;
+      else transactions.push(o.tx);
+    } else if (o.op === 'delete' && o.id) {
+      transactions = transactions.filter(t => t.id !== o.id);
+    }
+  });
+  return true;
+}
+
+// 舊 wiz_txs_cloud 遷移完成（資料已推上 Sheet 或已合併入 pull 結果）→ 清走嗰支大 key，本地即刻瘦身
+function finalizeTxCacheMigration() {
+  if (!txLoadedFromCache) return;
+  try { localStorage.removeItem('wiz_txs_cloud'); } catch (e) {}
+  txLoadedFromCache = false;
 }
 
 function clearPendingUploads() {
@@ -509,7 +598,18 @@ window.pullFromGoogleSheet = async function() {
   if (data.accounts && data.accounts.length > 0) accounts = data.accounts;
   if (data.groups && data.groups.length > 0) groups = data.groups;
   if (data.categories && data.categories.length > 0) categories = data.categories;
+  const prePullTxs = txLoadedFromCache ? transactions : null;
   if (data.transactions) transactions = data.transactions;
+  // 遷移救援：舊本地副本有、Sheet 冇嘅交易，可能係以前未上傳成功過嘅改動 — 救返入記憶體 + 記 op 等補推，唔好靜靜唔見
+  if (prePullTxs && Array.isArray(data.transactions)) {
+    const pulledIds = new Set(data.transactions.map(t => t.id));
+    prePullTxs.filter(t => t && t.id && !pulledIds.has(t.id)).forEach(t => {
+      transactions.push(t);
+      const ops = getPendingUploads().filter(o => o.id !== t.id);
+      ops.push({ op: 'upsert', id: t.id, tx: JSON.parse(JSON.stringify(t)) });
+      savePendingOps(ops);
+    });
+  }
   if (data.debtRepayments && Array.isArray(data.debtRepayments)) {
     localStorage.setItem('wiz_debt_repayments', JSON.stringify(data.debtRepayments));
   }
@@ -535,7 +635,27 @@ window.pullFromGoogleSheet = async function() {
     currentAccountId = accounts[0].id;
   }
 
-  saveLocalDataOnly();
+  if (Array.isArray(data.transactions)) {
+    // 合併未同步改動入啱啱拉落嚟嘅完整歷史，跟住先標記載入完成 + 存快照；有改動就即刻補推
+    const hadPendingOps = applyPendingOpsToTransactions();
+    txDataComplete = true;
+    finalizeTxCacheMigration();
+    saveLocalDataOnly();
+    if (hadPendingOps || window.hasLocalChanges) {
+      try {
+        const pushOk = await pushToGoogleSheet();
+        if (pushOk) {
+          clearPendingUploads();
+          window.hasLocalChanges = false;
+        }
+      } catch (e) {
+        console.error('載入後補推失敗（改動保留喺待同步佇列）：', e);
+      }
+      updateSyncStatusUI();
+    }
+  } else {
+    saveLocalDataOnly();
+  }
   return true;
 };
 
@@ -548,6 +668,20 @@ window.manualSyncTrigger = async function() {
   
   updateSyncStatusUI('syncing', '正在同步...');
 
+  // 未載入完整歷史嗰陣：只准 pull（pull 入面會合併 pending ops 再補推），唔好 push 唔完整嘅記憶體上去蓋過 Sheet
+  if (!txDataComplete) {
+    try {
+      await pullFromGoogleSheet();
+      updateSyncStatusUI();
+    } catch (err) {
+      console.error('同步失敗：', err);
+      updateSyncStatusUI('error', '連線失敗');
+      setTimeout(() => updateSyncStatusUI(), 3000);
+      alert('⚠️ 網絡連線不穩，未能載入最新資料！你嘅改動已經記低，連線恢復後開 app 會自動合併同步。');
+    }
+    return;
+  }
+
   try {
     const pendingList = getPendingUploads();
     if (pendingList.length > 0 || window.hasLocalChanges) {
@@ -555,6 +689,7 @@ window.manualSyncTrigger = async function() {
       if (!pushSuccess) throw new Error('Push failed');
       clearPendingUploads();
       window.hasLocalChanges = false;
+      finalizeTxCacheMigration();
     }
 
     await pullFromGoogleSheet();
@@ -569,32 +704,90 @@ window.manualSyncTrigger = async function() {
 
 async function handleAfterTxSave(txId) {
   window.hasLocalChanges = true;
+  // 未載入完整歷史嗰陣唔准 push：記憶體得返今次 session 嘅交易，
+  // 推上去會用唔完整嘅資料蓋過成個 Sheet。改動已經記入 pending ops，完成載入後會自動合併補推。
+  if (!txDataComplete) {
+    updateSyncStatusUI();
+    return;
+  }
   updateSyncStatusUI('syncing', '正在上傳...');
-  
+
   try {
     const success = await pushToGoogleSheet();
     if (success) {
       window.hasLocalChanges = false;
       clearPendingUploads();
-      updateSyncStatusUI();
-    } else {
-      addPendingUpload(txId);
+      finalizeTxCacheMigration();
     }
+    // 失敗唔使再加 pending：saveData嗰陣已經記低咗 op，狀態 UI 會顯示待同步
   } catch (e) {
-    addPendingUpload(txId);
+    console.error('上傳失敗（改動已記入待同步佇列）：', e);
   }
+  updateSyncStatusUI();
+}
+
+// 結餘快照：每次存檔順手記低每個戶口嘅現金結餘 + 總值，
+// 等下次開 app 未拉到 Sheet 之前（或者離線嗰陣）都顯示到啱嘅結餘。
+// foldedIds = 已經摺入快照數字入面嘅交易 id；未載入完成嗰陣計結餘會跳過佢哋，唔會重複計。
+function buildBalanceSnapshot() {
+  const balances = {};
+  accounts.forEach(acc => {
+    balances[acc.id] = { cash: getAccountCashBalance(acc.id), total: getAccountTotalValue(acc.id) };
+  });
+  let foldedIds = getPendingUploads().filter(o => o.op === 'upsert').map(o => o.id);
+  if (!txDataComplete) {
+    const prev = balanceSnapshot && Array.isArray(balanceSnapshot.foldedIds) ? balanceSnapshot.foldedIds : [];
+    foldedIds = [...new Set([...prev, ...transactions.map(t => t.id), ...foldedIds])];
+  }
+  const snap = { at: new Date().toISOString(), balances, foldedIds };
+  balanceSnapshot = snap;
+  return snap;
 }
 
 function saveLocalDataOnly() {
-  localStorage.setItem('wiz_cats_cloud', JSON.stringify(categories));
-  localStorage.setItem('wiz_grps_cloud', JSON.stringify(groups));
-  localStorage.setItem('wiz_accs_cloud', JSON.stringify(accounts));
-  localStorage.setItem('wiz_txs_cloud', JSON.stringify(transactions));
-  localStorage.setItem('wiz_stock_cache_cloud', JSON.stringify(stockPriceCache));
+  // 寫入次序：交易行先（最重要）；每支 key 分開 try/catch。
+  // 2026-11-12 根治：Lok 部機 localStorage 滿咗（QuotaExceededError），
+  // 以前第一支 setItem 一爆就成個 saveData 死埋 → 冇上傳、冇閂頁、重開 app 改動消失。
+  // 而家：寫唔入唔好拖死成條鏈 — 清走可自動重建嘅 cache（股價／匯率）騰位再試，
+  // 都唔得先彈窗講明邊支 key 寫唔入 + 每支 key 佔幾多位；雲端同步同 renderApp 照常行。
+  const entries = [
+    ['wiz_accs_cloud', accounts],
+    ['wiz_cats_cloud', categories],
+    ['wiz_grps_cloud', groups],
+    ['wiz_balance_snapshot', buildBalanceSnapshot()],
+    ['wiz_stock_cache_cloud', stockPriceCache]
+  ];
+  const writeOne = (key, val) => {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch (e) { console.error('本地儲存寫入失敗（' + key + '）：', e); return false; }
+  };
+  let failed = entries.filter(([k, v]) => !writeOne(k, v)).map(([k]) => k);
+  if (failed.length > 0) {
+    try { localStorage.removeItem('wiz_stock_cache_cloud'); } catch (e) {}
+    try { localStorage.removeItem('wiz_fx_cache'); } catch (e) {}
+    // 股價 cache 刪咗就算（下次更新股價會寫返）；其他 key 騰位後重試
+    failed = failed.filter(k => k !== 'wiz_stock_cache_cloud' && !writeOne(k, (entries.find(en => en[0] === k) || [])[1]));
+  }
+  if (failed.length > 0 && !window.__quotaAlerted) {
+    window.__quotaAlerted = true;
+    let report = '';
+    try {
+      const sizes = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('wiz_') === 0) sizes.push([k, (localStorage.getItem(k) || '').length]);
+      }
+      sizes.sort((a, b) => b[1] - a[1]);
+      report = sizes.map(s => s[0] + '：' + Math.round(s[1] / 1024) + ' KB').join('\n');
+    } catch (e) {}
+    alert('⚠️ 電話本地儲存空間已滿（雲端同步會照常進行，資料以 Sheet 為準）：\n寫唔入：' + failed.join('、') + (report ? '\n\n各項佔用：\n' + report : '') + '\n\n麻煩影低呢個畫面話返俾小黃知 🙏');
+  }
   renderApp();
 }
 
 window.saveData = function(txId = null) {
+  // 先記低未同步改動（upsert 存成條交易），先至存本地同嘗試上傳 — 就算 push 失敗，改動都唔會唔見
+  if (txId) recordPendingOpFor(txId);
   saveLocalDataOnly();
   handleAfterTxSave(txId || ('tx-' + Date.now()));
 };
@@ -860,9 +1053,21 @@ window.refreshLiveStockPrices = async function() {
 function getAccountCashBalance(accId) {
   const acc = accounts.find(a => a.id === accId);
   if (!acc) return 0;
-  let balance = Number(acc.initialBalance || 0);
+  // 未載入完整歷史嗰陣：用結餘快照做底，只疊加未摺入快照嘅今次 session 交易，
+  // 唔好由期初結餘計起（咁會少咗成段歷史，結餘會錯）
+  if (!txDataComplete && balanceSnapshot && balanceSnapshot.balances && balanceSnapshot.balances[accId]) {
+    const folded = new Set(balanceSnapshot.foldedIds || []);
+    const sessionTxs = transactions.filter(t => !folded.has(t.id));
+    return balanceSnapshot.balances[accId].cash + sumTxEffects(acc, accId, sessionTxs);
+  }
+  return Number(acc.initialBalance || 0) + sumTxEffects(acc, accId, transactions);
+}
 
-  transactions.forEach(t => {
+// 將一列交易對戶口現金結餘嘅影響加總（唔包期初結餘）
+function sumTxEffects(acc, accId, txList) {
+  let balance = 0;
+
+  txList.forEach(t => {
     const txCur = t.currency || acc.currency;
 
     if (t.type === 'adjust' && t.accountId === accId) {
@@ -990,9 +1195,14 @@ function getHoldings(accId) {
 }
 
 function getAccountTotalValue(accId) {
-  const cash = getAccountCashBalance(accId);
   const acc = accounts.find(a => a.id === accId);
   if (!acc) return 0;
+  // 未載入完整歷史：用快照總值做底，調整今次 session 嘅現金變動（持倉市值嗰部分要等同步完成先更新返）
+  if (!txDataComplete && balanceSnapshot && balanceSnapshot.balances && balanceSnapshot.balances[accId]) {
+    const snap = balanceSnapshot.balances[accId];
+    return snap.total + (getAccountCashBalance(accId) - snap.cash);
+  }
+  const cash = getAccountCashBalance(accId);
   if (acc.type === 'investment' || acc.type === 'crypto') {
     const holdings = getHoldings(accId);
     const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
@@ -2389,6 +2599,12 @@ window.deleteCurrentTx = function() {
     transactions = transactions.filter(t => t.id !== id && t.id !== txToDelete.linkedTxId);
   } else {
     transactions = transactions.filter(t => t.id !== id);
+  }
+
+  // 先記低 delete op（連 linked 交易嗰筆）：就算之後 push 失敗 + 重開 app，刪除都唔會翻生
+  if (window.notePendingTxDelete) {
+    window.notePendingTxDelete(id);
+    if (txToDelete && txToDelete.linkedTxId) window.notePendingTxDelete(txToDelete.linkedTxId);
   }
 
   saveData(id);
