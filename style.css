@@ -788,6 +788,9 @@ select:focus,
 #repay-log-modal {
   z-index: 1100 !important;
 }
+#adjust-balance-modal {
+  z-index: 1200 !important;
+}
 
 /* 分類搜尋抽屜樣式 */
 .category-picker-trigger {

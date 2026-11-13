@@ -466,7 +466,14 @@ function deserializeStatementsFromSync(rows) {
 window.pushToGoogleSheet = async function() {
   if (!SCRIPT_URL) return false;
   try {
-    const debtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+    const rawDebtRepayments = JSON.parse(localStorage.getItem('wiz_debt_repayments')) || [];
+    // 一樣補齊每條借貸記錄嘅 type／currency 欄位（冇 type 當 repay、冇 currency 留空字串），
+    // 等 DebtRepayments tab 穩定有呢兩欄，唔會因為第一條記錄冇呢啲 key 而漏欄；已有嘅值原封不動
+    const debtRepayments = rawDebtRepayments.map(r => ({
+      ...r,
+      type: String(r.type || '').trim().toLowerCase() === 'adjust' ? 'adjust' : 'repay',
+      currency: r.currency || ''
+    }));
     const creditStatements = serializeStatementsForSync(JSON.parse(localStorage.getItem('wiz_credit_statements')) || []);
     const newSymbols = window.pendingNewSymbols || [];
     // 送上去之前補齊每條數嘅 statementId／isPaid 欄位（冇值都俾空字串／false），
