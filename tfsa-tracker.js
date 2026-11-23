@@ -1,5 +1,5 @@
 // ==========================================================================
-// TFSA Contribution Limit Tracker 獨立模組 (SPEC-002 修復版)
+// TFSA Contribution Limit Tracker 獨立模組 (SPEC-002 / SPEC-003)
 // ==========================================================================
 
 let tfsaTransactions = JSON.parse(localStorage.getItem('wiz_tfsa_txs')) || [];
@@ -17,11 +17,17 @@ function persistTFSATransactions(txs) {
   tfsaTransactions = txs;
 }
 
+// 日期清洗：過濾並切除 ISO 時間戳字串 (例如 T05:00:00.000Z)，確保純粹 YYYY-MM-DD
+function cleanTFSADateStr(dateStr) {
+  if (!dateStr) return '';
+  return String(dateStr).split('T')[0].trim();
+}
+
 // 核心計算引擎：按日期由舊至新嚴格累積試算 (對齊舊版 logic)
 function calculateTFSARoomAndBalances() {
   const rawList = getTFSATransactions();
   // 複製並按日期遞增排序 (舊 -> 新)
-  const sorted = [...rawList].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sorted = [...rawList].sort((a, b) => new Date(cleanTFSADateStr(a.date)) - new Date(cleanTFSADateStr(b.date)));
 
   let currentRoom = 0;
   const bankBalances = {};
@@ -59,11 +65,21 @@ function calculateTFSARoomAndBalances() {
       }
     }
 
+    // 負零防護：微小值歸零，避免出現 -$0.00
+    let safeRoom = currentRoom;
+    if (Math.abs(safeRoom) < 0.005) {
+      safeRoom = 0;
+    }
+
     return {
       ...t,
-      runningRoom: currentRoom
+      runningRoom: safeRoom
     };
   });
+
+  if (Math.abs(currentRoom) < 0.005) {
+    currentRoom = 0;
+  }
 
   return {
     currentRoom,
@@ -85,16 +101,21 @@ window.renderTFSATrackerView = function() {
     roomEl.style.color = currentRoom < 0 ? 'var(--ios-red)' : 'var(--hero-text)';
   }
 
-  // 2. 更新銀行帳戶結餘列表
+  // 2. 更新銀行帳戶結餘列表 (過濾結餘等於 0 或負微小值者)
   const bankContainer = document.getElementById('tfsa-bank-balances');
   if (bankContainer) {
     bankContainer.innerHTML = '';
-    const bankEntries = Object.entries(bankBalances);
-    if (bankEntries.length === 0) {
+    // 嚴格過濾：結餘小於等於 0.004 之帳戶直接略過不 render
+    const activeBankEntries = Object.entries(bankBalances).filter(([, bal]) => {
+      const numBal = Number(bal) || 0;
+      return numBal > 0.004;
+    });
+
+    if (activeBankEntries.length === 0) {
       bankContainer.style.display = 'none';
     } else {
       bankContainer.style.display = 'grid';
-      bankEntries.forEach(([bank, bal]) => {
+      activeBankEntries.forEach(([bank, bal]) => {
         const chip = document.createElement('div');
         chip.className = 'tfsa-bank-chip';
         const formattedBal = Number(bal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -130,28 +151,49 @@ window.renderTFSATrackerView = function() {
     else if (item.action === 'Interest') badgeClass = 'tfsa-badge-interest';
     else if (item.action === 'Transfer') badgeClass = 'tfsa-badge-transfer';
 
+    // 日期清洗
+    const cleanDate = cleanTFSADateStr(item.date);
+
+    // 金額色彩對齊銀行帳戶流水：Withdraw 用紅色 (--ios-red)，其餘一律用綠色 (--ios-green)
+    const isWithdraw = (item.action === 'Withdraw');
+    const amtColor = isWithdraw ? 'var(--ios-red)' : 'var(--ios-green)';
+
+    // 操作後餘額負零防護格式化
+    let safeRunningRoom = Number(item.runningRoom || 0);
+    if (Math.abs(safeRunningRoom) < 0.005) {
+      safeRunningRoom = 0;
+    }
+    const runningRoomStr = safeRunningRoom.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const amtStr = Number(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const runningRoomStr = Number(item.runningRoom || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     row.innerHTML = `
-      <div style="flex: 1; min-width: 0;">
-        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+        <!-- 行 1：動作類型 Tag -->
+        <div>
           <span class="tfsa-action-badge ${badgeClass}">${item.action}</span>
-          <span style="font-size: 13.5px; font-weight: 700; color: #1C1C1E; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.bankAccount || 'Government / CRA'}</span>
         </div>
-        <div style="font-size: 11px; color: var(--text-muted);">
-          ${item.date} · 操作後餘額: $${runningRoomStr}
+        <!-- 行 2：銀行名稱 -->
+        <div style="font-size: 14px; font-weight: 700; color: #1C1C1E; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${item.bankAccount || 'Government / CRA'}
+        </div>
+        <!-- 行 3：記錄日期 (純 YYYY-MM-DD) -->
+        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.2;">
+          ${cleanDate}
+        </div>
+        <!-- 行 4：操作後餘額 -->
+        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.2;">
+          操作後餘額: $${runningRoomStr}
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 14px; font-weight: 700; font-feature-settings: 'tnum' 1; font-variant-numeric: tabular-nums;">
+        <span style="font-size: 14px; font-weight: 700; color: ${amtColor}; font-feature-settings: 'tnum' 1; font-variant-numeric: tabular-nums;">
           $${amtStr}
         </span>
         <div style="display: flex; gap: 4px;">
           <button type="button" class="debt-btn-circle secondary" onclick="openTFSAModal('${item.id}')" title="編輯">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           </button>
-          <button type="button" class="debt-btn-circle secondary" onclick="deleteTFSATransaction('${item.id}')" title="刪除" style="color:#D95D5D;">
+          <button type="button" class="debt-btn-circle secondary" onclick="deleteTFSATransaction('${item.id}')" title="刪除" style="color:var(--ios-red);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
         </div>
@@ -182,7 +224,7 @@ window.openTFSAModal = function(editId = null) {
 
     if (titleEl) titleEl.innerText = '編輯 TFSA 記錄';
     if (editIdInput) editIdInput.value = item.id;
-    if (dateInput) dateInput.value = item.date;
+    if (dateInput) dateInput.value = cleanTFSADateStr(item.date);
     if (actionSelect) actionSelect.value = item.action;
     if (amountInput) amountInput.value = item.amount;
 
@@ -241,7 +283,8 @@ window.handleTFSAActionChange = function() {
 
 window.saveTFSATransaction = function() {
   const editId = document.getElementById('tfsa-edit-id')?.value;
-  const date = document.getElementById('tfsa-date')?.value || new Date().toISOString().split('T')[0];
+  const rawDate = document.getElementById('tfsa-date')?.value || new Date().toISOString().split('T')[0];
+  const date = cleanTFSADateStr(rawDate);
   const action = document.getElementById('tfsa-action')?.value;
   const amount = parseFloat(document.getElementById('tfsa-amount')?.value);
 
