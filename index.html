@@ -44,6 +44,7 @@
         <div id="desktop-nav-dropdown" class="desktop-dropdown-menu" style="display: none;">
           <button type="button" onclick="switchMainTab('accounts'); toggleDesktopMenu(false);">戶口主頁</button>
           <button type="button" onclick="switchMainTab('debts'); toggleDesktopMenu(false);">內部借貸</button>
+          <button type="button" onclick="switchMainTab('tfsa'); toggleDesktopMenu(false);">TFSA 額度</button>
           <button type="button" onclick="switchMainTab('settings'); toggleDesktopMenu(false);">系統設定</button>
         </div>
       </div>
@@ -127,6 +128,35 @@
       </div>
       <div style="padding: 14px 16px; flex: 1; overflow-y: auto;">
         <div id="debt-cards-container"></div>
+      </div>
+    </div>
+
+    <!-- View 2.5: TFSA Contribution Tracker 獨立 View -->
+    <div id="view-tfsa" class="main-page-view" style="display: none;">
+      <div class="page-view-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <h2 style="font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5c.3 1.2.8 2.2 1.5 3.1.7-.8 1.7-1.5 2.8-1.8.2.8.2 1.7 0 2.5 1.1-.3 2.2-.3 3.2 0-.3.9-.9 1.7-1.7 2.2 1 .3 1.9.9 2.5 1.7-1 .5-2.1.7-3.2.5.4 1 .5 2.1.2 3.1-.9-.4-1.8-1-2.5-1.8-.1 1.2-.5 2.3-1.2 3.2-.8-.8-1.4-1.8-1.6-3-.2 1.2-.8 2.2-1.6 3-.7-.9-1.1-2-1.2-3.2-.7.8-1.6 1.4-2.5 1.8-.3-1-.2-2.1.2-3.1-1.1.2-2.2 0-3.2-.5.6-.8 1.5-1.4 2.5-1.7-.8-.5-1.4-1.3-1.7-2.2 1-.3 2.1-.3 3.2 0-.2-.8-.2-1.7 0-2.5 1.1.3 2.1 1 2.8 1.8.7-.9 1.2-1.9 1.5-3.1Z"/><path d="M12 17.5V22"/></svg>
+            TFSA Tracker
+          </h2>
+          <button class="btn-action" type="button" onclick="openTFSAModal()">＋ 記錄</button>
+        </div>
+      </div>
+      <div style="padding: 14px 16px; flex: 1; overflow-y: auto;">
+        <!-- 頂部 Hero 總結卡片 -->
+        <div class="tfsa-hero-card">
+          <div class="tfsa-hero-title">Current Contribution Room</div>
+          <div class="tfsa-hero-amt" id="tfsa-current-room">$0.00</div>
+        </div>
+
+        <!-- 各銀行 TFSA 帳戶結餘卡片容器 -->
+        <div id="tfsa-bank-balances" class="tfsa-bank-grid"></div>
+
+        <!-- 歷史流水清單 -->
+        <div style="margin-top: 10px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">歷史明細紀錄</div>
+          <div id="tfsa-tx-list-container" class="debt-grouped-list"></div>
+        </div>
       </div>
     </div>
 
@@ -341,6 +371,11 @@
     <button class="tab-item" id="tab-btn-debts" type="button" onclick="switchMainTab('debts')">
       <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
       <span>借貸</span>
+    </button>
+
+    <button class="tab-item" id="tab-btn-tfsa" type="button" onclick="switchMainTab('tfsa')">
+      <div class="tab-pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5c.3 1.2.8 2.2 1.5 3.1.7-.8 1.7-1.5 2.8-1.8.2.8.2 1.7 0 2.5 1.1-.3 2.2-.3 3.2 0-.3.9-.9 1.7-1.7 2.2 1 .3 1.9.9 2.5 1.7-1 .5-2.1.7-3.2.5.4 1 .5 2.1.2 3.1-.9-.4-1.8-1-2.5-1.8-.1 1.2-.5 2.3-1.2 3.2-.8-.8-1.4-1.8-1.6-3-.2 1.2-.8 2.2-1.6 3-.7-.9-1.1-2-1.2-3.2-.7.8-1.6 1.4-2.5 1.8-.3-1-.2-2.1.2-3.1-1.1.2-2.2 0-3.2-.5.6-.8 1.5-1.4 2.5-1.7-.8-.5-1.4-1.3-1.7-2.2 1-.3 2.1-.3 3.2 0-.2-.8-.2-1.7 0-2.5 1.1.3 2.1 1 2.8 1.8.7-.9 1.2-1.9 1.5-3.1Z"/><path d="M12 17.5V22"/></svg></div>
+      <span>TFSA</span>
     </button>
     
     <button class="tab-item" id="tab-btn-settings" type="button" onclick="switchMainTab('settings')">
@@ -561,6 +596,55 @@
     </div>
   </div>
 
+  <!-- Modal：TFSA 記錄新增 / 編輯 Modal -->
+  <div class="modal-overlay" id="tfsa-modal">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <span id="tfsa-modal-title">新增 TFSA 記錄</span>
+        <button type="button" onclick="closeTFSAModal()" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="tfsa-edit-id">
+        <div class="form-group">
+          <label>日期</label>
+          <input type="date" id="tfsa-date">
+        </div>
+        <div class="form-group">
+          <label>動作類型 (Action)</label>
+          <select id="tfsa-action" onchange="handleTFSAActionChange()">
+            <option value="Contribution">Contribution (供款)</option>
+            <option value="Withdraw">Withdraw (提款)</option>
+            <option value="Annual Room Increase">Annual Room Increase (額度增加)</option>
+            <option value="Interest">Interest (利息/收益)</option>
+            <option value="Transfer">Transfer (帳戶轉移)</option>
+          </select>
+        </div>
+        <div class="form-group" id="tfsa-group-single-bank">
+          <label id="tfsa-label-bank">銀行 / 機構名稱</label>
+          <input type="text" id="tfsa-bank" placeholder="例如：Wealthsimple / Questrade">
+        </div>
+        <div id="tfsa-group-transfer-bank" style="display: none; gap: 8px;">
+          <div class="form-group" style="flex: 1;">
+            <label>轉出銀行 (From)</label>
+            <input type="text" id="tfsa-from-bank" placeholder="例如：RBC">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>轉入銀行 (To)</label>
+            <input type="text" id="tfsa-to-bank" placeholder="例如：Wealthsimple">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>金額 (CAD)</label>
+          <input type="number" step="0.01" id="tfsa-amount" placeholder="0.00">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-action btn-secondary" onclick="closeTFSAModal()">取消</button>
+        <button type="button" class="btn-action" onclick="saveTFSATransaction()">儲存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal：信用卡對帳單 Modal -->
   <div class="modal-overlay" id="statement-modal">
     <div class="modal-card" style="max-width: 480px;">
@@ -635,5 +719,6 @@
   <script src="app.js"></script>
   <script src="debt-tracker.js"></script>
   <script src="statement.js"></script>
+  <script src="tfsa-tracker.js"></script>
 </body>
 </html>

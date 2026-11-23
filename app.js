@@ -360,7 +360,8 @@ Object.assign(UI_ICON_PATHS, {
   chartDown: '<path d="m3 7 6 6 4-4 8 8"/><path d="M21 11v6h-6"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',
   gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
-  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  maple: '<path d="M12 2.5c.3 1.2.8 2.2 1.5 3.1.7-.8 1.7-1.5 2.8-1.8.2.8.2 1.7 0 2.5 1.1-.3 2.2-.3 3.2 0-.3.9-.9 1.7-1.7 2.2 1 .3 1.9.9 2.5 1.7-1 .5-2.1.7-3.2.5.4 1 .5 2.1.2 3.1-.9-.4-1.8-1-2.5-1.8-.1 1.2-.5 2.3-1.2 3.2-.8-.8-1.4-1.8-1.6-3-.2 1.2-.8 2.2-1.6 3-.7-.9-1.1-2-1.2-3.2-.7.8-1.6 1.4-2.5 1.8-.3-1-.2-2.1.2-3.1-1.1.2-2.2 0-3.2-.5.6-.8 1.5-1.4 2.5-1.7-.8-.5-1.4-1.3-1.7-2.2 1-.3 2.1-.3 3.2 0-.2-.8-.2-1.7 0-2.5 1.1.3 2.1 1 2.8 1.8.7-.9 1.2-1.9 1.5-3.1Z"/><path d="M12 17.5V22"/>'
 });
 function getCategoryIconKind(cat) {
   if (!cat) return 'tag';
@@ -566,6 +567,7 @@ window.pushToGoogleSheet = async function() {
         currency: r.currency || ''
       }));
     const creditStatements = serializeStatementsForSync(JSON.parse(localStorage.getItem('wiz_credit_statements')) || []);
+    const tfsaTransactions = JSON.parse(localStorage.getItem('wiz_tfsa_txs')) || [];
     const newSymbols = window.pendingNewSymbols || [];
     // 送上去之前補齊每條數嘅 statementId／isPaid 欄位（冇值都俾空字串／false），
     // 等 Transactions tab 嘅欄位齊全 — Apps Script 係用第一條數嘅 key 做欄名，唔補齊會漏欄
@@ -574,7 +576,7 @@ window.pushToGoogleSheet = async function() {
       statementId: t.statementId || '',
       isPaid: t.isPaid === true || String(t.isPaid).trim().toUpperCase() === 'TRUE'
     }));
-    const payload = { accounts, groups, categories, transactions: syncTransactions, debtRepayments, creditStatements, newSymbols };
+    const payload = { accounts, groups, categories, transactions: syncTransactions, debtRepayments, creditStatements, tfsaTransactions, newSymbols };
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -618,6 +620,13 @@ window.pullFromGoogleSheet = async function() {
     const rebuiltStatements = deserializeStatementsFromSync(data.creditStatements);
     creditStatements = rebuiltStatements;
     localStorage.setItem('wiz_credit_statements', JSON.stringify(rebuiltStatements));
+  }
+
+  if (data.tfsaTransactions && Array.isArray(data.tfsaTransactions)) {
+    localStorage.setItem('wiz_tfsa_txs', JSON.stringify(data.tfsaTransactions));
+    if (typeof window.renderTFSATrackerView === 'function' && currentMainTab === 'tfsa') {
+      window.renderTFSATrackerView();
+    }
   }
 
   if (data.stockPrices && Array.isArray(data.stockPrices)) {
@@ -1381,11 +1390,13 @@ window.switchMainTab = function(tabName) {
 
   const viewAccs = document.getElementById('view-accounts');
   const viewDebts = document.getElementById('view-debt-tracker') || document.getElementById('view-debts');
+  const viewTfsa = document.getElementById('view-tfsa');
   const viewSettings = document.getElementById('view-settings');
   const viewForm = document.getElementById('view-tx-form');
 
   if (viewAccs) viewAccs.style.display = 'none';
   if (viewDebts) viewDebts.style.display = 'none';
+  if (viewTfsa) viewTfsa.style.display = 'none';
   if (viewSettings) viewSettings.style.display = 'none';
   if (viewForm) viewForm.style.display = 'none';
 
@@ -1405,6 +1416,12 @@ window.switchMainTab = function(tabName) {
     if (tabBtn) tabBtn.classList.add('active');
     document.body.classList.add('hide-header');
     if (typeof window.renderDebtTrackerView === 'function') window.renderDebtTrackerView();
+  } else if (tabName === 'tfsa') {
+    if (viewTfsa) viewTfsa.style.display = 'flex';
+    const tabBtn = document.getElementById('tab-btn-tfsa');
+    if (tabBtn) tabBtn.classList.add('active');
+    document.body.classList.add('hide-header');
+    if (typeof window.renderTFSATrackerView === 'function') window.renderTFSATrackerView();
   } else if (tabName === 'settings') {
     if (viewSettings) viewSettings.style.display = 'flex';
     const tabBtn = document.getElementById('tab-btn-settings');
